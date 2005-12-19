@@ -59,6 +59,8 @@ public class ServiceServer {
 			exc.printStackTrace();
 		}
 		
+		System.out.println("Service server started.");
+		
 		// Start listening for new service types on the local subnet
 		try {
 			getClient().getJmdns().addServiceTypeListener(new STypeListener());
@@ -144,7 +146,6 @@ public class ServiceServer {
 	class SServerMonitor implements Runnable {
 		
 		public void run() {
-			System.out.println("Service server started.");
 			while(status == SERVER_RUNNING) {
 				// run
 			}

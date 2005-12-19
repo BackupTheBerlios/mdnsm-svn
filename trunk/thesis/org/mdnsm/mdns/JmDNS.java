@@ -701,7 +701,10 @@ public class JmDNS
     public void registerServiceType(String type)
     {
     	// String name = type.toLowerCase();
-        type = convertToType(type);
+    	//System.out.println("Register service type: "+type);
+        if(!type.contains("*")) {
+        	type = convertToType(type);
+        }
         String name = type.toLowerCase();
         if (serviceTypes.get(name) == null)
         {
@@ -718,6 +721,9 @@ public class JmDNS
                     ((ServiceTypeListener) iterator.next()).serviceTypeAdded(new ServiceEvent(this, type, null, null));
                 }
             }
+        }
+        else {
+        	System.out.println("TYPE ALREADY EXISTS!");
         }
     }
     
