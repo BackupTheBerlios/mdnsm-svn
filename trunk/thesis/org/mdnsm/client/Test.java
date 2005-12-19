@@ -11,7 +11,7 @@ public class Test {
 	public static void main(String args[]) throws IOException {
 		JmDNS jmdns = new JmDNS();
 		Client client = new Client(jmdns);
-		jmdns.registerService(new ServiceInfo("_http._udp.192.168.0.199.local.", "testhttp", 1030, "test service"));
+		jmdns.registerService(new ServiceInfo("_http._udp."+jmdns.getInterface().getHostAddress()+".local.", "testhttp", 1030, "test service"));
 	}
 	
 }

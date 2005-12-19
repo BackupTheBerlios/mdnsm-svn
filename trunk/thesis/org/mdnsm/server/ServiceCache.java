@@ -33,7 +33,7 @@ public class ServiceCache {
 			while(iterator.hasNext()) {
 				ServiceInfo info = (ServiceInfo)iterator.next();
 				if(info.getType().equalsIgnoreCase(service.getType()) && info.getName().equalsIgnoreCase(service.getName())) {
-					synchronized(vector){
+					synchronized(vector) {
 						vector.remove(info);
 					}
 				}
@@ -54,6 +54,7 @@ public class ServiceCache {
 	 * Remove a service from this cache.
 	 */
 	public void removeService(String type, String name) {
+		ServiceInfo infoTBR = null;
 		Enumeration iterator = cache.keys();
 		while(iterator.hasMoreElements()) {
 			String subnet = (String)iterator.nextElement();
@@ -62,9 +63,13 @@ public class ServiceCache {
 			while(iterator2.hasNext()) {
 				ServiceInfo info = (ServiceInfo)iterator2.next();
 				if(info.getType().equalsIgnoreCase(type) && info.getName().equalsIgnoreCase(name)) {
-					synchronized(services) {
-						services.remove(info);
-					}
+					infoTBR = info;
+					break;
+				}
+			}
+			if(infoTBR != null) {
+				synchronized(services) {
+					services.remove(infoTBR);
 				}
 			}
 		}

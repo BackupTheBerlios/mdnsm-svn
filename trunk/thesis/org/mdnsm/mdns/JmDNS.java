@@ -957,7 +957,7 @@ public class JmDNS
                 if (!expired)
                 {
                     // new record
-                    ServiceEvent event = new ServiceEvent(this, toFullType(type), toUnqualifiedName(type, name), null);
+                    ServiceEvent event = new ServiceEvent(this, type, toUnqualifiedName(type, name), null);
                     for (Iterator iterator = serviceListenerList.iterator(); iterator.hasNext();)
                     {
                         ((ServiceListener) iterator.next()).serviceAdded(event);
@@ -966,7 +966,7 @@ public class JmDNS
                 else
                 {
                     // expire record
-                    ServiceEvent event = new ServiceEvent(this, toFullType(type), toUnqualifiedName(type, name), null);
+                    ServiceEvent event = new ServiceEvent(this, type, toUnqualifiedName(type, name), null);
                     for (Iterator iterator = serviceListenerList.iterator(); iterator.hasNext();)
                     {
                         ((ServiceListener) iterator.next()).serviceRemoved(event);

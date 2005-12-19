@@ -90,9 +90,9 @@ public class ServiceServer {
 		 */
 		public void serviceTypeAdded(ServiceEvent event) {
 			if(!typesDiscovered.contains(event.getType())) {
-				synchronized(typesDiscovered) {
+				//synchronized(typesDiscovered) {
 					typesDiscovered.add(event.getType());
-				}
+				//}
 				System.out.println("ServiceServer.serviceTypeAdded: service type added: " + event.getType());
 				getClient().getJmdns().addServiceListener(event.getType(), new SListener());
 			}
@@ -114,14 +114,15 @@ public class ServiceServer {
 		 * A new service is discovered and added to the server's cache.
 		 */
 		public void serviceAdded(ServiceEvent event) {
-			System.out.println("ServiceServer.serviceAdded: service added: " + event.getType());
 			getClient().getServerCache().addService(new ServiceInfo(event.getType(), event.getName()));
+			System.out.println("ServiceServer.serviceAdded: service added: " + event.getType());
 		}
 		
 		/**
 		 * A service has been removed and thus removed from the server's cache.
 		 */
 		public void serviceRemoved(ServiceEvent event) {
+			System.out.println("ServiceServer.serviceRemoved: service removed: " + event.getType());
 			getClient().getServerCache().removeService(event.getType(), event.getName());
 		}
 		
