@@ -20,9 +20,8 @@ public class ServiceCache {
 	 * Add a new service to this cache.
 	 */
 	public void addService(ServiceInfo service) {
-		System.out.println("service added!");
 		String subnet;
-		if(service.getHostAddress() != null) {
+		if(!service.getHostAddress().equals("")) {
 			subnet = getSubnetFromAddress(service.getHostAddress());
 		}
 		else {

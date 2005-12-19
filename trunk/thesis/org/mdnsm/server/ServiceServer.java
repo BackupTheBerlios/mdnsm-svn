@@ -1,5 +1,3 @@
-// DIKKE TEST LOL
-
 package org.mdnsm.server;
 
 import org.mdnsm.mdns.*;
@@ -92,10 +90,11 @@ public class ServiceServer {
 		 */
 		public void serviceTypeAdded(ServiceEvent event) {
 			if(!typesDiscovered.contains(event.getType())) {
-				getClient().getJmdns().addServiceListener(event.getType(), new SListener());
 				synchronized(typesDiscovered) {
 					typesDiscovered.add(event.getType());
 				}
+				System.out.println("ServiceServer.serviceTypeAdded: service type added: " + event.getType());
+				getClient().getJmdns().addServiceListener(event.getType(), new SListener());
 			}
 			else {
 				System.out.println("ServiceServer.serviceTypeAdded: service type exists: " + event.getType());
