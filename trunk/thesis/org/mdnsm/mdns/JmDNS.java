@@ -445,7 +445,6 @@ public class JmDNS
      */
     public void requestServiceInfo(String type, String name, int timeout)
     {
-    	System.out.println("requestServiceInfo");
         registerServiceType(type);
         ServiceInfo info = new ServiceInfo(type, name);
         new ServiceInfoResolver(info).start();
@@ -722,9 +721,6 @@ public class JmDNS
                 }
             }
         }
-        else {
-        	System.out.println("TYPE ALREADY EXISTS!");
-        }
     }
     
     /**
@@ -900,7 +896,7 @@ public class JmDNS
         // report existing matched records
         if (question != null)
         {
-            for (DNSCache.CacheNode i = cache.find(question.name); i != null; i = i.next())
+        	for (DNSCache.CacheNode i = cache.find(question.name); i != null; i = i.next())
             {
                 DNSRecord c = (DNSRecord) i.getValue();
                 if (question.answeredBy(c) && !c.isExpired(now))
@@ -1911,7 +1907,9 @@ public class JmDNS
                                             {
                                                 for (Iterator serviceTypeIterator = serviceTypes.values().iterator(); serviceTypeIterator.hasNext();)
                                                 {
-                                                    answers.add(new DNSRecord.Pointer("_services._mdns._udp.local.", DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, (String) serviceTypeIterator.next()));
+                                                	String typer = (String)serviceTypeIterator.next();
+                                                	//System.out.println("Sending type " +typer);
+                                                    answers.add(new DNSRecord.Pointer("_services._mdns._udp.local.", DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, typer));
                                                 }
                                             }
                                             break;

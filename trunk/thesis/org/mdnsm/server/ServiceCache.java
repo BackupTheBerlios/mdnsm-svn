@@ -21,6 +21,7 @@ public class ServiceCache {
 	 */
 	public void addService(ServiceInfo service) {
 		String subnet;
+		ServiceInfo infoTBR = null;
 		if(!service.getHostAddress().equals("")) {
 			subnet = getSubnetFromAddress(service.getHostAddress());
 		}
@@ -33,9 +34,13 @@ public class ServiceCache {
 			while(iterator.hasNext()) {
 				ServiceInfo info = (ServiceInfo)iterator.next();
 				if(info.getType().equalsIgnoreCase(service.getType()) && info.getName().equalsIgnoreCase(service.getName())) {
-					synchronized(vector) {
-						vector.remove(info);
-					}
+					infoTBR = info;
+					break;
+				}
+			}
+			if(infoTBR != null) {
+				synchronized(vector) {
+					vector.remove(infoTBR);
 				}
 			}
 			synchronized(vector) {

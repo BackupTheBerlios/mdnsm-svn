@@ -52,7 +52,7 @@ public class ServiceServer {
 		
 		// Register this server as a service
 		try {
-			getClient().getJmdns().registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, ""));
+			getClient().getJmdns().registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services"));
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while registering service server with JmDNS instance:");
@@ -117,14 +117,15 @@ public class ServiceServer {
 		 */
 		public void serviceAdded(ServiceEvent event) {
 			getClient().getServerCache().addService(new ServiceInfo(event.getType(), event.getName()));
-			System.out.println("ServiceServer.serviceAdded: service added: " + event.getType());
+			System.out.println("ServiceServer.serviceAdded: " + event.getType());
+			getClient().getJmdns().requestServiceInfo(event.getType(), event.getName());
 		}
 		
 		/**
 		 * A service has been removed and thus removed from the server's cache.
 		 */
 		public void serviceRemoved(ServiceEvent event) {
-			System.out.println("ServiceServer.serviceRemoved: service removed: " + event.getType());
+			System.out.println("ServiceServer.serviceRemoved: " + event.getType());
 			getClient().getServerCache().removeService(event.getType(), event.getName());
 		}
 		
@@ -132,8 +133,8 @@ public class ServiceServer {
 		 * A service has been resolved and updated in the server's cache.
 		 */
 		public void serviceResolved(ServiceEvent event) {
-			System.out.println("ServiceServer.serviceResolved: service added: " + event.getType());
 			getClient().getServerCache().addService(event.getInfo());
+			System.out.println("ServiceServer.serviceResolved: " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
 		}
 		
 	}
