@@ -30,6 +30,8 @@ public class ServiceServer {
 	private int status;
 	private Thread statusMonitor;
 
+	private Timer timer;
+	
 	/**
 	 * Initialize a new server as a part of the given client.
 	 * 
@@ -46,6 +48,7 @@ public class ServiceServer {
 			throw new IllegalArgumentException("DNSServer.DNSServer: invalid host name specified.");
 		}
 		this.hostAddress = hostAddress;
+		timer = new Timer();
 		
 		// Start the server status monitor
 		statusMonitor = new Thread(new SServerMonitor(), "ServiceServer.SServerMonitor");
@@ -118,7 +121,31 @@ public class ServiceServer {
 		public void serviceAdded(ServiceEvent event) {
 			getClient().getServerCache().addService(new ServiceInfo(event.getType(), event.getName()));
 			System.out.println("ServiceServer.serviceAdded: " + event.getType());
-			getClient().getJmdns().requestServiceInfo(event.getType(), event.getName());
+			new ServiceResolver(event).start();
+		}
+		
+		/**
+		 * Inner class to delay the service information resolving a bit to allow
+		 * service information to be available.
+		 *
+		 * @author	Frederic Cremer
+		 */
+		private class ServiceResolver extends TimerTask {
+			
+			private ServiceEvent event;
+			
+			public ServiceResolver(ServiceEvent event) {
+				this.event = event;
+			}
+			
+			public void start() {
+				timer.schedule(this, 200);
+			}
+			
+			public void run() {
+				getClient().getJmdns().requestServiceInfo(event.getType(), event.getName());
+			}
+			
 		}
 		
 		/**

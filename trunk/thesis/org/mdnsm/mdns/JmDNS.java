@@ -1014,6 +1014,7 @@ public class JmDNS
             {
                 if (!expired)
                 {
+                	
                     isInformative = true;
                     cache.add(rec);
                 }
