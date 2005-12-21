@@ -4,6 +4,7 @@ import org.mdnsm.mdns.*;
 import org.mdnsm.monitor.*;
 import org.mdnsm.server.*;
 import java.io.*;
+import java.util.*;
 
 /**
  * Temporary (?) class, which contains the main method starting all
@@ -17,7 +18,6 @@ public class Client {
 	private ServiceServer server;
 	private ServiceCache serverCache;
 	private JmDNS jmdns;
-	private ServerMonitor monitor;
 	
 	public Client(JmDNS jmdns) throws IOException {
 		this.jmdns = jmdns;
@@ -37,8 +37,28 @@ public class Client {
 		return jmdns;
 	}
 	
-	public ServerMonitor getMonitor() {
-		return monitor;
+	/**
+	 * Inner class monitoring the status of the network interface cards of this
+	 * client.  A new NIC or NIC configuration should result in the creation of
+	 * new JmDNS and ServiceServer instances for the associated network address.
+	 * On the contrary, when a NIC configuration disappears or changes, the cor-
+	 * responding JmDNS and ServiceServer instances should be changed or removed
+	 * accordingly.
+	 * 
+	 * @author	Frederic Cremer
+	 */
+	private class NICMonitor extends TimerTask {
+		
+		public void start() {
+			// TODO: instellen dat om de zoveel tijd run() uitgevoerd wordt
+		}
+		
+		public void run() {
+			// TODO:
+			// a) checken van beschikbaarheid van NIC's
+			// b) servers/JmDNS's opstarten en afsluiten
+		}
+		
 	}
 	
 }
