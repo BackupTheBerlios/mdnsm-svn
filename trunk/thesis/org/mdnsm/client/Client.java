@@ -1,7 +1,6 @@
 package org.mdnsm.client;
 
 import org.mdnsm.mdns.*;
-import org.mdnsm.monitor.*;
 import org.mdnsm.server.*;
 import java.io.*;
 import java.util.*;
