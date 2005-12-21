@@ -1909,7 +1909,6 @@ public class JmDNS
                                                 for (Iterator serviceTypeIterator = serviceTypes.values().iterator(); serviceTypeIterator.hasNext();)
                                                 {
                                                 	String typer = (String)serviceTypeIterator.next();
-                                                	//System.out.println("Sending type " +typer);
                                                     answers.add(new DNSRecord.Pointer("_services._mdns._udp.local.", DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, typer));
                                                 }
                                             }
