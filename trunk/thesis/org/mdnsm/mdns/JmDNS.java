@@ -165,6 +165,7 @@ public class JmDNS
     /**
      * Create an instance of JmDNS.
      */
+    // TODO: aanpassen!
     public JmDNS() throws IOException
     {
         logger.finer("JmDNS instance created");

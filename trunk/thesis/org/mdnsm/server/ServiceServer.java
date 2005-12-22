@@ -38,6 +38,7 @@ public class ServiceServer {
 	 * @param	client
 	 *          The client of which this server is a part.
 	 */
+	// TODO: aanpassen!
 	public ServiceServer(Client client, String hostAddress) {
 		if(client == null) {
 			throw new IllegalArgumentException("DNSServer.DNSServer: invalid client specified.");
@@ -55,7 +56,7 @@ public class ServiceServer {
 		
 		// Register this server as a service
 		try {
-			getClient().getJmdns().registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services"));
+			getClient().getJmdns(hostAddress).registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services"));
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while registering service server with JmDNS instance:");
@@ -66,7 +67,7 @@ public class ServiceServer {
 		
 		// Start listening for new service types on the local subnet
 		try {
-			getClient().getJmdns().addServiceTypeListener(new STypeListener());
+			getClient().getJmdns(hostAddress).addServiceTypeListener(new STypeListener());
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
@@ -99,7 +100,7 @@ public class ServiceServer {
 					typesDiscovered.add(event.getType());
 				//}
 				System.out.println("ServiceServer.serviceTypeAdded: service type added: " + event.getType());
-				getClient().getJmdns().addServiceListener(event.getType(), new SListener());
+				getClient().getJmdns(hostAddress).addServiceListener(event.getType(), new SListener());
 			}
 			else {
 				System.out.println("ServiceServer.serviceTypeAdded: service type exists: " + event.getType());
@@ -143,7 +144,7 @@ public class ServiceServer {
 			}
 			
 			public void run() {
-				getClient().getJmdns().requestServiceInfo(event.getType(), event.getName());
+				getClient().getJmdns(hostAddress).requestServiceInfo(event.getType(), event.getName());
 			}
 			
 		}

@@ -14,11 +14,13 @@ import java.util.*;
  */
 public class Client {
 	
-	private ServiceServer server;
+	private Hashtable jmdnss = new Hashtable();
+	private Hashtable servers = new Hashtable();
 	private ServiceCache serverCache;
-	private JmDNS jmdns;
 	
 	private Timer timer;
+	
+	private Client client = this;
 	
 	public Client(JmDNS jmdns) throws IOException {
 		timer = new Timer();
@@ -28,16 +30,12 @@ public class Client {
 //		server = new ServiceServer(this, jmdns.getInterface().getHostAddress());
 	}
 	
-	public ServiceServer getServer() {
-		return server;
-	}
-	
 	public ServiceCache getServerCache() {
 		return serverCache;
 	}
 	
-	public JmDNS getJmdns() {
-		return jmdns;
+	public JmDNS getJmdns(String ip) {
+		return null;
 	}
 	
 	/**
@@ -65,38 +63,73 @@ public class Client {
 		
 		public void run() {
 			try {
-				String[] ips = getIPs();
-				for(int i = 0; i < ips.length; i++) {
-					System.out.println(ips[i]);
+				Vector ips = getIPs();
+				removeServers(ips);
+				checkServerNeed(ips);
+			}
+			catch(IOException exc) {
+				System.out.println("Client.NICMonitor.run: I/O exception occurred when determining IPs: " + exc.getMessage());
+			}
+		}
+		
+		/**
+		 * Check whether servers should be halted (that is, only 1 configured NIC remains).
+		 */
+		private void checkServerNeed(Vector ips) {
+			// One IP left, which has a server bound to it
+			if(ips.size() <= 1 && servers.keys().hasMoreElements()) {
+				((ServiceServer)servers.keys().nextElement()).shutdown();
+				// TODO: serverCache.empty();
+			}
+			// Multiple IPs detected
+			else if(ips.size() > 1) {
+				if(serverCache == null) {
+					serverCache = new ServiceCache();
+				}
+				Iterator iterator = ips.iterator();
+				while(iterator.hasNext()) {
+					String ip = (String)iterator.next();
+					if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
+						servers.put(ip, new ServiceServer(client, ip));
+					}
+					else if(!jmdnss.containsKey(ip)) {
+						try {
+							jmdnss.put(ip, new JmDNS());
+						}
+						catch(IOException exc) {
+							System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
+						}
+						servers.put(ip, new ServiceServer(client, ip));
+					}
 				}
 			}
-			catch(Exception exc) {
-				
+		}
+		
+		/**
+		 * Remove obsolete servers and JmDNS instances.
+		 */
+		private void removeServers(Vector ips) {
+			Enumeration existingServers = servers.keys();
+			while(existingServers.hasMoreElements()) {
+				String key = (String)existingServers.nextElement();
+				if(!ips.contains(key)) {
+					((ServiceServer)servers.get(key)).shutdown();
+					((JmDNS)jmdnss.get(key)).close();
+					servers.remove(key);
+					jmdnss.remove(key);
+				}
 			}
-			// TODO:
-			// a) checken van beschikbaarheid van NIC's
-			// b) servers/JmDNS's opstarten en afsluiten
 		}
 		
 		/**
 		 * Get the available IPs of this computer.
 		 */
-		private String[] getIPs() throws IOException {
+		private Vector getIPs() throws IOException {
 			if(os.equals("Windows XP")) {
-				Vector ips = getWindowsIPConfiguration();
-				String[] result = new String[ips.size()];
-				for(int i = 0; i < ips.size(); i++) {
-					result[i] = (String)ips.get(i);
-				}
-				return result;
+				return getWindowsIPConfiguration();
 			}
 			else if(os.equals("Linux")){
-				Vector ips = getLinuxIPConfiguration();
-				String[] result = new String[ips.size()];
-				for(int i = 0; i < ips.size(); i++) {
-					result[i] = (String)ips.get(i);
-				}
-				return result;
+				return getLinuxIPConfiguration();
 			}
 			// TODO: exception gooien als besturingssysteem niet herkend wordt
 			else return null;
