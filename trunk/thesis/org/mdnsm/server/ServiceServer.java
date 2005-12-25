@@ -19,34 +19,42 @@ import java.util.*;
 
 public class ServiceServer {
 	
+	private Client client;
+	private JmDNS jmdns;
+	
 	private String hostAddress;
 	private static int threads = 10;
 	private static int port = 53;
-	private Client client;
-	private ServiceCache serviceCache = new ServiceCache();
 	
+	private Timer timer;
 	private final int SERVER_STOPPED = 0;
 	private final int SERVER_RUNNING = 1;
 	private int status;
 	private Thread statusMonitor;
-
-	private Timer timer;
 	
 	/**
 	 * Initialize a new server as a part of the given client.
 	 * 
 	 * @param	client
 	 *          The client of which this server is a part.
+	 * @param	jdmsn
+	 * 			The JmDNS instance to which this server is bound.
+	 * @param	hostAddress
+	 * 			The IP address of the network interface card on which this server is listening.
 	 */
-	// TODO: aanpassen!
-	public ServiceServer(Client client, String hostAddress) {
+	public ServiceServer(Client client, JmDNS jmdns, String hostAddress) {
 		if(client == null) {
-			throw new IllegalArgumentException("DNSServer.DNSServer: invalid client specified.");
+			throw new IllegalArgumentException("ServiceServer.ServiceServer: invalid client specified.");
 		}
 		this.client = client;
 		
+		if(jmdns == null) {
+			throw new IllegalArgumentException("ServiceServer.ServiceServer: invalid JmDNS instance specified.");
+		}
+		this.jmdns = jmdns;
+		
 		if(hostAddress == null) {
-			throw new IllegalArgumentException("DNSServer.DNSServer: invalid host name specified.");
+			throw new IllegalArgumentException("ServiceServer.ServiceServer: invalid host name specified.");
 		}
 		this.hostAddress = hostAddress;
 		timer = new Timer();
@@ -56,7 +64,7 @@ public class ServiceServer {
 		
 		// Register this server as a service
 		try {
-			getClient().getJmdns(hostAddress).registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services"));
+			jmdns.registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services"));
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while registering service server with JmDNS instance:");
@@ -67,7 +75,7 @@ public class ServiceServer {
 		
 		// Start listening for new service types on the local subnet
 		try {
-			getClient().getJmdns(hostAddress).addServiceTypeListener(new STypeListener());
+			jmdns.addServiceTypeListener(new STypeListener());
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
@@ -100,7 +108,7 @@ public class ServiceServer {
 					typesDiscovered.add(event.getType());
 				//}
 				System.out.println("ServiceServer.serviceTypeAdded: service type added: " + event.getType());
-				getClient().getJmdns(hostAddress).addServiceListener(event.getType(), new SListener());
+				jmdns.addServiceListener(event.getType(), new SListener());
 			}
 			else {
 				System.out.println("ServiceServer.serviceTypeAdded: service type exists: " + event.getType());
@@ -144,7 +152,7 @@ public class ServiceServer {
 			}
 			
 			public void run() {
-				getClient().getJmdns(hostAddress).requestServiceInfo(event.getType(), event.getName());
+				jmdns.requestServiceInfo(event.getType(), event.getName());
 			}
 			
 		}
@@ -208,7 +216,8 @@ public class ServiceServer {
 	 * mDNS daemon.
 	 */
 	public void shutdown() {
-
+		status = SERVER_STOPPED;
+		// TODO: rest
 	}
 	
 	// obsolete, tenzij gebruiken voor name records (to be decided)

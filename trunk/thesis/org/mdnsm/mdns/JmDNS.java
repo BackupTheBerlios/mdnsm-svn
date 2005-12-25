@@ -165,14 +165,12 @@ public class JmDNS
     /**
      * Create an instance of JmDNS.
      */
-    // TODO: aanpassen!
-    public JmDNS() throws IOException
+    public JmDNS(String ip) throws IOException
     {
         logger.finer("JmDNS instance created");
         try
         {
-        	// TODO: adres fixen in Linux
-            InetAddress addr = InetAddress.getLocalHost();
+            InetAddress addr = InetAddress.getByAddress(InetAddress.getLocalHost().getHostName(), ip.getBytes());
             init(addr.isLoopbackAddress() ? null : addr, addr.getHostName()); // [PJYF Oct 14 2004] Why do we disallow the loopback address?
         }
         catch (IOException e)
@@ -702,7 +700,7 @@ public class JmDNS
     {
     	// String name = type.toLowerCase();
     	//System.out.println("Register service type: "+type);
-        if(!type.contains("*")) {
+        if(!type.endsWith("*.local.")) {
         	type = convertToType(type);
         }
         String name = type.toLowerCase();

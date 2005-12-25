@@ -22,20 +22,13 @@ public class Client {
 	
 	private Client client = this;
 	
-	public Client(JmDNS jmdns) throws IOException {
+	public Client() throws IOException {
 		timer = new Timer();
 		new NICMonitor().start();
-//		this.jmdns = jmdns;
-//		serverCache = new ServiceCache();
-//		server = new ServiceServer(this, jmdns.getInterface().getHostAddress());
 	}
 	
 	public ServiceCache getServerCache() {
 		return serverCache;
-	}
-	
-	public JmDNS getJmdns(String ip) {
-		return null;
 	}
 	
 	/**
@@ -90,16 +83,16 @@ public class Client {
 				while(iterator.hasNext()) {
 					String ip = (String)iterator.next();
 					if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
-						servers.put(ip, new ServiceServer(client, ip));
+						servers.put(ip, new ServiceServer(client, (JmDNS)jmdnss.get(ip), ip));
 					}
 					else if(!jmdnss.containsKey(ip)) {
 						try {
-							jmdnss.put(ip, new JmDNS());
+							jmdnss.put(ip, new JmDNS(ip));
 						}
 						catch(IOException exc) {
 							System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 						}
-						servers.put(ip, new ServiceServer(client, ip));
+						servers.put(ip, new ServiceServer(client, (JmDNS)jmdnss.get(ip), ip));
 					}
 				}
 			}
