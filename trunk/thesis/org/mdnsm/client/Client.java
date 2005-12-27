@@ -24,6 +24,7 @@ public class Client {
 	
 	public Client() throws IOException {
 		timer = new Timer();
+		// TODO: beginnen luisteren naar servers
 		new NICMonitor().start();
 	}
 	
@@ -56,6 +57,7 @@ public class Client {
 		
 		public void run() {
 			try {
+				// TODO: server is enige server op lokaal subnet
 				Vector ips = getIPs();
 				removeServers(ips);
 				checkServerNeed(ips);

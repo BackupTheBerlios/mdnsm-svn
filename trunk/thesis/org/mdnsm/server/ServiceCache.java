@@ -81,6 +81,27 @@ public class ServiceCache {
 	}
 	
 	/**
+	 * Remove the subnet and all associated services from this cache,
+	 * using the incoming stopped server address.
+	 * 
+	 * @param	address
+	 * 			The address of the stopped server.
+	 */
+	public void removeSubnet(String address) {
+		String subnet = getSubnetFromAddress(address);
+		if(cache.keySet().contains(subnet)) {
+			Vector vector = (Vector)cache.get(subnet);
+			Iterator iterator = vector.iterator();
+			while(iterator.hasNext()) {
+				ServiceInfo info = (ServiceInfo)iterator.next();
+				info.cancel();
+			}
+			vector.clear();
+			cache.remove(subnet);
+		}
+	}
+	
+	/**
 	 * Get the subnet out of the given address.
 	 * Convention used in this program: the first three bytes of each address
 	 * forms the subnet.

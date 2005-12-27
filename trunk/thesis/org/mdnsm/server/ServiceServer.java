@@ -26,6 +26,8 @@ public class ServiceServer {
 	private static int threads = 10;
 	private static int port = 53;
 	
+	private ServiceInfo serviceInfo;
+	
 	private Timer timer;
 	private final int SERVER_STOPPED = 0;
 	private final int SERVER_RUNNING = 1;
@@ -64,7 +66,9 @@ public class ServiceServer {
 		
 		// Register this server as a service
 		try {
-			jmdns.registerService(new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services"));
+			// TODO: deftige benaming voor service servers en deftige beschrijving
+			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services");
+			jmdns.registerService(serviceInfo);
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while registering service server with JmDNS instance:");
@@ -186,6 +190,13 @@ public class ServiceServer {
 			while(status == SERVER_RUNNING) {
 				// run
 			}
+			jmdns.unregisterService(serviceInfo);
+			// TODO: boodschap naar alle andere service servers
+			getClient().getServerCache().removeSubnet(hostAddress);
+			serviceInfo = null;
+			jmdns = null;
+			client = null;
+			hostAddress = null;
 			System.out.println("Service server stopped.");
 		}
 		
@@ -217,7 +228,6 @@ public class ServiceServer {
 	 */
 	public void shutdown() {
 		status = SERVER_STOPPED;
-		// TODO: rest
 	}
 	
 	// obsolete, tenzij gebruiken voor name records (to be decided)

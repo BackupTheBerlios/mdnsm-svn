@@ -557,7 +557,7 @@ public class ServiceInfo implements DNSListener {
 	/**
 	 * Sets the state and notifies all objects that wait on the ServiceInfo.
 	 */
-	synchronized void cancel() {
+	public synchronized void cancel() {
 		state = DNSState.CANCELED;
 		notifyAll();
 	}
