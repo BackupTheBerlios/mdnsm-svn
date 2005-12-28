@@ -67,7 +67,7 @@ public class ServiceServer {
 		// Register this server as a service
 		try {
 			// TODO: deftige benaming voor service servers en deftige beschrijving
-			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server registering services");
+			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server on "+hostAddress+" registering services");
 			jmdns.registerService(serviceInfo);
 		}
 		catch(IOException exc) {
@@ -75,7 +75,7 @@ public class ServiceServer {
 			exc.printStackTrace();
 		}
 		
-		System.out.println("Service server started.");
+		System.out.println("Service server started for "+hostAddress+".");
 		
 		// Start listening for new service types on the local subnet
 		try {
@@ -111,11 +111,11 @@ public class ServiceServer {
 				//synchronized(typesDiscovered) {
 					typesDiscovered.add(event.getType());
 				//}
-				System.out.println("ServiceServer.serviceTypeAdded: service type added: " + event.getType());
+				System.out.println("ServiceServer.serviceTypeAdded ("+hostAddress+"): " + event.getType());
 				jmdns.addServiceListener(event.getType(), new SListener());
 			}
 			else {
-				System.out.println("ServiceServer.serviceTypeAdded: service type exists: " + event.getType());
+				System.out.println("ServiceServer.serviceTypeAdded ("+hostAddress+"): service type exists: " + event.getType());
 			}
 		}
 		
@@ -133,7 +133,7 @@ public class ServiceServer {
 		 */
 		public void serviceAdded(ServiceEvent event) {
 			getClient().getServerCache().addService(new ServiceInfo(event.getType(), event.getName()));
-			System.out.println("ServiceServer.serviceAdded: " + event.getType());
+			System.out.println("ServiceServer.serviceAdded ("+hostAddress+"): " + event.getType());
 			new ServiceResolver(event).start();
 		}
 		
@@ -165,7 +165,7 @@ public class ServiceServer {
 		 * A service has been removed and thus removed from the server's cache.
 		 */
 		public void serviceRemoved(ServiceEvent event) {
-			System.out.println("ServiceServer.serviceRemoved: " + event.getType());
+			System.out.println("ServiceServer.serviceRemoved ("+hostAddress+"): " + event.getType());
 			getClient().getServerCache().removeService(event.getType(), event.getName());
 		}
 		
@@ -174,7 +174,7 @@ public class ServiceServer {
 		 */
 		public void serviceResolved(ServiceEvent event) {
 			getClient().getServerCache().addService(event.getInfo());
-			System.out.println("ServiceServer.serviceResolved: " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
+			System.out.println("ServiceServer.serviceResolved ("+hostAddress+"): " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
 		}
 		
 	}
@@ -197,7 +197,7 @@ public class ServiceServer {
 			jmdns = null;
 			client = null;
 			hostAddress = null;
-			System.out.println("Service server stopped.");
+			System.out.println("Service server stopped for "+hostAddress+".");
 		}
 		
 	}
