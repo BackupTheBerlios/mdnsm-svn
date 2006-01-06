@@ -17,7 +17,7 @@ import java.util.*;
  * @author Frederic Cremer
  */
 
-public class ServiceServer {
+public class ServiceServer implements Runnable {
 	
 	private Client client;
 	private JmDNS jmdns;
@@ -60,10 +60,6 @@ public class ServiceServer {
 		}
 		this.hostAddress = hostAddress;
 		timer = new Timer();
-		
-		// Start the server status monitor
-		statusMonitor = new Thread(new SServerMonitor(), "ServiceServer.SServerMonitor");
-		
 		// Register this server as a service
 		try {
 			// TODO: deftige benaming voor service servers en deftige beschrijving
@@ -85,12 +81,48 @@ public class ServiceServer {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
 			exc.printStackTrace();
 		}
-		// TODO: start UDP daemon and multicast an announcement to all other
-		// servers on the network
-		// TODO: start listening for queries from other servers
-		// TODO: start listening for queries from the local subnet
 		status = SERVER_RUNNING;
-		statusMonitor.start();
+	}
+	
+	public void run() {
+		while(status == SERVER_RUNNING) {
+			
+			// TODO: deze code hier in plaats van in constructor doet programma vlotter werken.  Waarom?
+			// Register this server as a service
+			try {
+				// TODO: deftige benaming voor service servers en deftige beschrijving
+				serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server on "+hostAddress+" registering services");
+				jmdns.registerService(serviceInfo);
+			}
+			catch(IOException exc) {
+				System.out.println("DNSServer.DNSServer: some I/O exception occured while registering service server with JmDNS instance:");
+				exc.printStackTrace();
+			}
+			
+			System.out.println("Service server started for "+hostAddress+".");
+			
+			// Start listening for new service types on the local subnet
+			try {
+				jmdns.addServiceTypeListener(new STypeListener());
+			}
+			catch(IOException exc) {
+				System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
+				exc.printStackTrace();
+			}
+			
+			// TODO: start UDP daemon and multicast an announcement to all other
+			// servers on the network
+			// TODO: start listening for queries from other servers
+			// TODO: start listening for queries from the local subnet
+		}
+		jmdns.unregisterService(serviceInfo);
+		// TODO: boodschap naar alle andere service servers
+		getClient().getServerCache().removeSubnet(hostAddress);
+		serviceInfo = null;
+		jmdns = null;
+		client = null;
+		System.out.println("Service server stopped for "+hostAddress+".");
+		hostAddress = null;
 	}
 	
 	/**
@@ -175,29 +207,6 @@ public class ServiceServer {
 		public void serviceResolved(ServiceEvent event) {
 			getClient().getServerCache().addService(event.getInfo());
 			System.out.println("ServiceServer.serviceResolved ("+hostAddress+"): " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
-		}
-		
-	}
-	
-	/**
-	 * Auxiliary class monitoring the state of this service server.
-	 * 
-	 * @author	Frederic Cremer
-	 */
-	class SServerMonitor implements Runnable {
-		
-		public void run() {
-			while(status == SERVER_RUNNING) {
-				// run
-			}
-			jmdns.unregisterService(serviceInfo);
-			// TODO: boodschap naar alle andere service servers
-			getClient().getServerCache().removeSubnet(hostAddress);
-			serviceInfo = null;
-			jmdns = null;
-			client = null;
-			hostAddress = null;
-			System.out.println("Service server stopped for "+hostAddress+".");
 		}
 		
 	}
