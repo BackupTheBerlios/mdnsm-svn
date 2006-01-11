@@ -5,6 +5,7 @@ import org.mdnsm.client.*;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.logging.Level;
 
 /**
  * Server recording NS DNS records for other service servers on the
@@ -90,17 +91,21 @@ public class ServiceServer implements Runnable {
 	
 	public void run() {
 		while(status == SERVER_RUNNING) {
-			
-			
+			try {
+				Thread.sleep(100);
+			}
+			catch(Exception exc) {
+				
+			}
 		}
-		jmdns.unregisterService(serviceInfo);
-		// TODO: boodschap naar alle andere service servers
-		getClient().getServerCache().removeSubnet(hostAddress);
-		serviceInfo = null;
-		jmdns = null;
-		client = null;
-		System.out.println("Service server stopped for "+hostAddress+".");
-		hostAddress = null;
+//		jmdns.unregisterService(serviceInfo);
+//		// TODO: boodschap naar alle andere service servers
+//		getClient().getServerCache().removeSubnet(hostAddress);
+//		serviceInfo = null;
+//		jmdns = null;
+//		client = null;
+//		System.out.println("Service server stopped for "+hostAddress+".");
+//		hostAddress = null;
 	}
 	
 	/**

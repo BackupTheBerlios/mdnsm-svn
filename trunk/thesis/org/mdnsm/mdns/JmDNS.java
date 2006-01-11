@@ -253,7 +253,12 @@ public class JmDNS
             }
         }
     }
-
+    
+    // TODO: weg?
+    public HostInfo getHostInfo() {
+    	return localHost;
+    }
+    
     private void openMulticastSocket(HostInfo hostInfo) throws IOException
     {
         if (group == null)

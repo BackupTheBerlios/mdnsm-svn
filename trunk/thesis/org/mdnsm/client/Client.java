@@ -114,7 +114,7 @@ public class Client {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
 				((ServiceServer)servers.get(key)).shutdown();
-				//((JmDNS)jmdnss.get(key)).close();
+				((JmDNS)jmdnss.get(key)).close();
 				servers.remove(key);
 				jmdnss.remove(key);
 			}
@@ -152,12 +152,14 @@ public class Client {
 					c = is.read();
 				}
 				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
+					System.out.println("ip found: "+ip);
 					result.add(ip);
 				}
 			}
 			output += (char) c;
 			c = is.read();
 		}
+		System.out.println();
 		return result;
 	}
 	
