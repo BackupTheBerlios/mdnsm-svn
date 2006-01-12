@@ -23,6 +23,7 @@ public class Client {
 	private String os;
 	
 	public Client() throws IOException {
+		serverCache = new ServiceCache();
 		timer = new Timer();
 		// TODO: beginnen luisteren naar servers
 		new NICMonitor().start();
@@ -56,14 +57,13 @@ public class Client {
 		
 		public void run() {
 			try {
-				//System.out.println("Client: checking NICs ...");
-				// TODO: server is enige server op lokaal subnet
 				Vector ips = getIPs();
 				removeServers(ips);
 				checkServerNeed(ips);
 			}
 			catch(IOException exc) {
 				System.out.println("Client.NICMonitor.run: I/O exception occurred when determining IPs: " + exc.getMessage());
+				exc.printStackTrace();
 			}
 		}
 		
@@ -76,14 +76,13 @@ public class Client {
 	private void checkServerNeed(Vector ips) {
 		// One IP left, which has a server bound to it
 		if(ips.size() <= 1 && servers.keys().hasMoreElements()) {
+			String key = (String)servers.keys().nextElement();
 			((ServiceServer)servers.get(servers.keys().nextElement())).shutdown();
+			servers.remove(key);
 			// TODO: serverCache.empty();
 		}
 		// Multiple IPs detected
 		else if(ips.size() > 1) {
-			if(serverCache == null) {
-				serverCache = new ServiceCache();
-			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
 				String ip = (String)iterator.next();
@@ -114,11 +113,25 @@ public class Client {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
 				((ServiceServer)servers.get(key)).shutdown();
-				((JmDNS)jmdnss.get(key)).close();
+				//timer.schedule(new JmDNSCanceller(((JmDNS)jmdnss.get(key))), 500);
 				servers.remove(key);
 				jmdnss.remove(key);
 			}
 		}
+	}
+	
+	private class JmDNSCanceller extends TimerTask {
+		
+		private JmDNS jmdns;
+		
+		public JmDNSCanceller(JmDNS jmdns) {
+			this.jmdns = jmdns;
+		}
+		
+		public void run() {
+			jmdns.close();
+		}
+		
 	}
 	
 	/**
@@ -152,14 +165,12 @@ public class Client {
 					c = is.read();
 				}
 				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
-					System.out.println("ip found: "+ip);
 					result.add(ip);
 				}
 			}
 			output += (char) c;
 			c = is.read();
 		}
-		System.out.println();
 		return result;
 	}
 	
@@ -180,14 +191,12 @@ public class Client {
 					c = is.read();
 				}
 				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
-					System.out.println("ip found: "+ip);
 					result.add(ip);
 				}
 			}
 			output += (char) c;
 			c = is.read();
 		}
-		System.out.println();
 		return result;
 	}
 	

@@ -2395,6 +2395,7 @@ public class JmDNS
                 }
 
             }
+            System.out.println("jmdns stopped");
         }
     }
 

@@ -98,14 +98,12 @@ public class ServiceServer implements Runnable {
 				
 			}
 		}
-//		jmdns.unregisterService(serviceInfo);
-//		// TODO: boodschap naar alle andere service servers
-//		getClient().getServerCache().removeSubnet(hostAddress);
-//		serviceInfo = null;
-//		jmdns = null;
-//		client = null;
-//		System.out.println("Service server stopped for "+hostAddress+".");
-//		hostAddress = null;
+		jmdns.unregisterService(serviceInfo);
+		jmdns.notify();
+		// TODO: boodschap naar alle andere service servers
+		getClient().getServerCache().removeSubnet(hostAddress);
+		System.out.println("Service server stopped for "+hostAddress+".");
+		// TODO: service info, jmdns, client en hostadres nog op null zetten
 	}
 	
 	/**
@@ -147,6 +145,12 @@ public class ServiceServer implements Runnable {
 		 * A new service is discovered and added to the server's cache.
 		 */
 		public void serviceAdded(ServiceEvent event) {
+			if(getClient() == null) {
+				System.out.println("client null!");
+			}
+			if(getClient().getServerCache() == null) {
+				System.out.println("cache null!");
+			}
 			getClient().getServerCache().addService(new ServiceInfo(event.getType(), event.getName()));
 			System.out.println("ServiceServer.serviceAdded ("+hostAddress+"): " + event.getType());
 			new ServiceResolver(event).start();
