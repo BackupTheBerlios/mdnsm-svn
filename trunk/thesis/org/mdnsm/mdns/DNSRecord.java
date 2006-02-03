@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * @version %I%, %G%
  * @author	Arthur van Hoff, Rick Blair, Werner Randelshofer, Pierre Frisch
  */
-abstract class DNSRecord extends DNSEntry
+public abstract class DNSRecord extends DNSEntry
 {
     private static Logger logger = Logger.getLogger(DNSRecord.class.toString());
     int ttl;
@@ -176,12 +176,12 @@ abstract class DNSRecord extends DNSEntry
     /**
      * Address record.
      */
-    static class Address extends DNSRecord
+    public static class Address extends DNSRecord
     {
         private static Logger logger = Logger.getLogger(Address.class.toString());
         InetAddress addr;
 
-        Address(String name, int type, int clazz, int ttl, InetAddress addr)
+        public Address(String name, int type, int clazz, int ttl, InetAddress addr)
         {
             super(name, type, clazz, ttl);
             this.addr = addr;
@@ -395,12 +395,12 @@ abstract class DNSRecord extends DNSEntry
     /**
      * Pointer record.
      */
-    static class Pointer extends DNSRecord
+    public static class Pointer extends DNSRecord
     {
         private static Logger logger = Logger.getLogger(Pointer.class.toString());
         String alias;
 
-        Pointer(String name, int type, int clazz, int ttl, String alias)
+        public Pointer(String name, int type, int clazz, int ttl, String alias)
         {
             super(name, type, clazz, ttl);
             this.alias = alias;
@@ -430,7 +430,7 @@ abstract class DNSRecord extends DNSEntry
             return false;
         }
 
-        String getAlias()
+        public String getAlias()
         {
             return alias;
         }
@@ -446,12 +446,12 @@ abstract class DNSRecord extends DNSEntry
         }
     }
 
-    static class Text extends DNSRecord
+    public static class Text extends DNSRecord
     {
         private static Logger logger = Logger.getLogger(Text.class.toString());
         byte text[];
 
-        Text(String name, int type, int clazz, int ttl, byte text[])
+        public Text(String name, int type, int clazz, int ttl, byte text[])
         {
             super(name, type, clazz, ttl);
             this.text = text;
@@ -515,7 +515,7 @@ abstract class DNSRecord extends DNSEntry
     /**
      * Service record.
      */
-    static class Service extends DNSRecord
+    public static class Service extends DNSRecord
     {
         private static Logger logger = Logger.getLogger(Service.class.toString());
         int priority;
@@ -523,7 +523,7 @@ abstract class DNSRecord extends DNSEntry
         int port;
         String server;
 
-        Service(String name, int type, int clazz, int ttl, int priority, int weight, int port, String server)
+        public Service(String name, int type, int clazz, int ttl, int priority, int weight, int port, String server)
         {
             super(name, type, clazz, ttl);
             this.priority = priority;
