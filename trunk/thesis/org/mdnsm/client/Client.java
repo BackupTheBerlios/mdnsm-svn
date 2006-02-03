@@ -16,20 +16,20 @@ public class Client {
 	
 	private Hashtable jmdnss = new Hashtable();
 	private Hashtable servers = new Hashtable();
-	private ServiceCache serverCache;
+	private DNSCache serverCache;
 	
 	private Timer timer;
 	
 	private String os;
 	
 	public Client() throws IOException {
-		serverCache = new ServiceCache();
+		serverCache = new DNSCache(100);
 		timer = new Timer();
 		// TODO: beginnen luisteren naar servers
 		new NICMonitor().start();
 	}
 	
-	public ServiceCache getServerCache() {
+	public DNSCache getServerCache() {
 		return serverCache;
 	}
 	
@@ -75,11 +75,20 @@ public class Client {
 	 */
 	private void checkServerNeed(Vector ips) {
 		// One IP left, which has a server bound to it
-		if(ips.size() <= 1 && servers.keys().hasMoreElements()) {
+		if(ips.size() == 1 && servers.keys().hasMoreElements()) {
 			String key = (String)servers.keys().nextElement();
 			((ServiceServer)servers.get(servers.keys().nextElement())).shutdown();
 			servers.remove(key);
-			// TODO: serverCache.empty();
+			serverCache.clear();
+		}
+		// One IP detected, no active JmDNS instances (typically at startup with a single NIC).
+		if(ips.size() == 1 && jmdnss.size() == 0) {
+			try {
+				jmdnss.put((String)ips.get(0), new JmDNS((String)ips.get(0)));
+			}
+			catch(IOException exc) {
+				System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
+			}
 		}
 		// Multiple IPs detected
 		else if(ips.size() > 1) {
