@@ -7,6 +7,8 @@ import java.net.*;
 import java.util.*;
 import java.util.logging.Level;
 
+import javax.print.CancelablePrintJob;
+
 /**
  * Server recording NS DNS records for other service servers on the
  * network and recording Multicast DNS records for the services available on the
@@ -28,6 +30,7 @@ public class ServiceServer implements Runnable {
 	private static int port = 53;
 	
 	private ServiceInfo serviceInfo;
+	private int infoTtl = 360000;
 	
 	private Timer timer;
 	private final int SERVER_STOPPED = 0;
@@ -66,6 +69,10 @@ public class ServiceServer implements Runnable {
 			// TODO: deftige benaming voor service servers en deftige beschrijving
 			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server on "+hostAddress+" registering services");
 			jmdns.registerService(serviceInfo);
+			int ttl = 360000;
+			client.getServerCache().add(new DNSRecord.Pointer(serviceInfo.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getQualifiedName()));
+			client.getServerCache().add(new DNSRecord.Service(serviceInfo.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getPriority(), serviceInfo.getWeight(), serviceInfo.getPort(), jmdns.getLocalHost().getName()));
+			client.getServerCache().add(new DNSRecord.Text(serviceInfo.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getTextBytes()));
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while registering service server with JmDNS instance:");
@@ -99,9 +106,27 @@ public class ServiceServer implements Runnable {
 			}
 		}
 		jmdns.unregisterService(serviceInfo);
-		jmdns.notify();
 		// TODO: boodschap naar alle andere service servers
-		getClient().getServerCache().removeSubnet(hostAddress);
+		
+		boolean left = true;
+		// Remove server PTR records from the server cache
+		DNSEntry entry = client.getServerCache().get(new DNSRecord.Pointer(serviceInfo.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getQualifiedName()));
+		while(left) {
+			left = client.getServerCache().remove(entry);
+		}
+		left = true;
+		// Remove server SRV records from the server cache
+		entry = client.getServerCache().get(new DNSRecord.Service(serviceInfo.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getPriority(), serviceInfo.getWeight(), serviceInfo.getPort(), jmdns.getLocalHost().getName()));
+		while(left) {
+			left = client.getServerCache().remove(entry);
+		}
+		left = true;
+		// Remove server TXT records from the server cache
+		entry = client.getServerCache().get(new DNSRecord.Text(serviceInfo.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getTextBytes()));
+		while(left) {
+			left = client.getServerCache().remove(entry);
+		}
+		
 		System.out.println("Service server stopped for "+hostAddress+".");
 		// TODO: service info, jmdns, client en hostadres nog op null zetten
 	}
@@ -145,14 +170,8 @@ public class ServiceServer implements Runnable {
 		 * A new service is discovered and added to the server's cache.
 		 */
 		public void serviceAdded(ServiceEvent event) {
-			if(getClient() == null) {
-				System.out.println("client null!");
-			}
-			if(getClient().getServerCache() == null) {
-				System.out.println("cache null!");
-			}
-			getClient().getServerCache().addService(new ServiceInfo(event.getType(), event.getName()));
-			System.out.println("ServiceServer.serviceAdded ("+hostAddress+"): " + event.getType());
+			client.getServerCache().add(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+event.getType()));
+			System.out.println("ServiceServer.serviceAdded (@ "+hostAddress+"): " + event.getName() + "." + event.getType());
 			new ServiceResolver(event).start();
 		}
 		
@@ -184,16 +203,35 @@ public class ServiceServer implements Runnable {
 		 * A service has been removed and thus removed from the server's cache.
 		 */
 		public void serviceRemoved(ServiceEvent event) {
-			System.out.println("ServiceServer.serviceRemoved ("+hostAddress+"): " + event.getType());
-			getClient().getServerCache().removeService(event.getType(), event.getName());
+			boolean left = true;
+			// Remove PTR records from the server cache
+			DNSEntry entry = client.getServerCache().get(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+event.getType()));
+			String alias = ((DNSRecord.Pointer)entry).getAlias();
+			while(left && entry != null) {
+				left = client.getServerCache().remove(entry);
+			}
+			left = true;
+			// Remove SRV records from the server cache
+			entry = client.getServerCache().get(new DNSRecord.Service(alias, DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, 0, 0, 0, jmdns.getLocalHost().getName()));
+			while(left && entry != null) {
+				left = client.getServerCache().remove(entry);
+			}
+			left = true;
+			// Remove TXT records from the server cache
+			entry = client.getServerCache().get(new DNSRecord.Text(alias, DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, null));
+			while(left && entry != null) {
+				left = client.getServerCache().remove(entry);
+			}
+			System.out.println("ServiceServer.serviceRemoved (@ "+hostAddress+"): " + event.getType());
 		}
 		
 		/**
 		 * A service has been resolved and updated in the server's cache.
 		 */
 		public void serviceResolved(ServiceEvent event) {
-			getClient().getServerCache().addService(event.getInfo());
-			System.out.println("ServiceServer.serviceResolved ("+hostAddress+"): " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
+			client.getServerCache().add(new DNSRecord.Service(event.getInfo().getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, event.getInfo().getPriority(), event.getInfo().getWeight(), event.getInfo().getPort(), jmdns.getLocalHost().getName()));
+			client.getServerCache().add(new DNSRecord.Text(event.getInfo().getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, event.getInfo().getTextBytes()));
+			System.out.println("ServiceServer.serviceResolved (@ "+hostAddress+"): " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
 		}
 		
 	}
