@@ -12,6 +12,7 @@ import java.net.MulticastSocket;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.concurrent.locks.*;
 
 // REMIND: multiple IP addresses
 
@@ -162,11 +163,14 @@ public class JmDNS
      */
     private HashMap serviceCollectors = new HashMap();
 
+    String ip;
+    
     /**
      * Create an instance of JmDNS.
      */
     public JmDNS(String ip) throws IOException
     {
+    	this.ip = ip;
         logger.finer("JmDNS instance created");
         try
         {
@@ -621,42 +625,42 @@ public class JmDNS
         }
         logger.fine("registerService() JmDNS registered service as " + info);
     }
-
+    
     /**
      * Unregister a service. The service should have been registered.
      */
     public void unregisterService(ServiceInfo info)
     {
-        synchronized (this)
-        {
-            services.remove(info.getQualifiedName().toLowerCase());
-        }
-        info.cancel();
-
-        // Note: We use this lock object to synchronize on it.
-        //       Synchronizing on another object (e.g. the ServiceInfo) does
-        //       not make sense, because the sole purpose of the lock is to
-        //       wait until the canceler has finished. If we synchronized on
-        //       the ServiceInfo or on the Canceler, we would block all
-        //       accesses to synchronized methods on that object. This is not
-        //       what we want!
-        Object lock = new Object();
-        new Canceler(info, lock).start();
-
-        // Remind: We get a deadlock here, if the Canceler does not run!
-        try
-        {
-            synchronized (lock)
-            {
-                lock.wait();
-            }
-        }
-        catch (InterruptedException e)
-        {
-            // empty
-        }
+    	synchronized (this)
+    	{
+    		services.remove(info.getQualifiedName().toLowerCase());
+    	}
+    	info.cancel();
+    	
+    	// Note: We use this lock object to synchronize on it.
+    	//       Synchronizing on another object (e.g. the ServiceInfo) does
+    	//       not make sense, because the sole purpose of the lock is to
+    	//       wait until the canceler has finished. If we synchronized on
+    	//       the ServiceInfo or on the Canceler, we would block all
+    	//       accesses to synchronized methods on that object. This is not
+    	//       what we want!
+    	Object lock = new Object();
+    	new Canceler(info, lock).start();
+    	
+    	// Remind: We get a deadlock here, if the Canceler does not run!
+    	try
+    	{
+    		synchronized (lock)
+    		{
+    			lock.wait();
+    		}
+    	}
+    	catch (InterruptedException e)
+    	{
+    		// empty
+    	}
     }
-
+    
     /**
      * Unregister all services.
      */
@@ -2207,6 +2211,8 @@ public class JmDNS
         }
     }
 
+    private int nbCancelers = 0;
+    
     /**
      * The Canceler sends two announces with TTL=0 for the specified services.
      */
@@ -2257,6 +2263,7 @@ public class JmDNS
 
         public void start()
         {
+        	nbCancelers += 1;
             timer.schedule(this, 0, DNSConstants.ANNOUNCE_WAIT_INTERVAL);
         }
 
@@ -2298,6 +2305,7 @@ public class JmDNS
                         lock.notifyAll();
                     }
                     cancel();
+                    nbCancelers -= 1;
                 }
             }
             catch (Throwable e)
@@ -2364,38 +2372,6 @@ public class JmDNS
                 }
                 logger.log(Level.WARNING, "recover() We are back!");
             }
-        }
-    }
-
-    /**
-     * Close down jmdns. Release all resources and unregister all services.
-     */
-    public void close()
-    {
-        if (state != DNSState.CANCELED)
-        {
-            synchronized (this)
-            { // Synchronize only if we are not already in process to prevent dead locks
-                // Stop JmDNS
-                state = DNSState.CANCELED; // This protects against recursive calls
-
-                unregisterAllServices();
-                disposeServiceCollectors();
-
-                // close socket
-                closeMulticastSocket();
-
-                // Stop the timer
-                timer.cancel();
-
-                // remove the shutdown hook
-                if (shutdown != null)
-                {
-                    Runtime.getRuntime().removeShutdownHook(shutdown);
-                }
-
-            }
-            System.out.println("jmdns stopped");
         }
     }
 
@@ -2628,5 +2604,50 @@ public class JmDNS
             return qualifiedName;
         }
     }
-}
+    
+    /**
+     * Close down jmdns. Release all resources and unregister all services.
+     */
+    public void close()
+    {
+    	if (state != DNSState.CANCELED)
+    	{
+    		(new JmDNSCloser()).start();
+    	}
+    }
+    
+    private class JmDNSCloser extends TimerTask {
+    	
+    	public void start() {
+    		timer.schedule(this, 100, 100);
+    	}
+    	
+    	public void run() {
+    		if(nbCancelers == 0) {
+    			synchronized (this)
+        		{ // Synchronize only if we are not already in process to prevent dead locks
+        			// Stop JmDNS
+        			state = DNSState.CANCELED; // This protects against recursive calls
+        			
+        			unregisterAllServices();
+        			disposeServiceCollectors();
+        			
+        			// close socket
+        			closeMulticastSocket();
+        			
+        			// remove the shutdown hook
+        			if (shutdown != null)
+        			{
+        				Runtime.getRuntime().removeShutdownHook(shutdown);
+        			}
+        		}
+    			cancel();
+    			
+    			// Stop the timer
+    			timer.cancel();
+    		}
+    	}
+    	
+    }
 
+}
