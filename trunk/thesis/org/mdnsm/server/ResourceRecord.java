@@ -85,6 +85,14 @@ public class ResourceRecord
 
         return (a);
     }
+    
+    public int getTtl() {
+    	return ttl;
+    }
+    
+    public String getDomain() {
+    	return domain;
+    }
 
     /**
      * @return a readable version
