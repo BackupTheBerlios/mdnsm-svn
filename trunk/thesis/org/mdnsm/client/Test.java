@@ -10,7 +10,9 @@ import java.util.regex.*;
 public class Test {
 	
 	public static void main(String args[]) throws IOException {
-		Client client = new Client();
+		String test = "test";
+		System.out.println(new String(test.getBytes()));
+		//Client client = new Client();
 //		jmdns.registerService(new ServiceInfo("_http._udp."+jmdns.getInterface().getHostAddress()+".local.", "testhttp", 1112, "test http"));
 	}
 	
