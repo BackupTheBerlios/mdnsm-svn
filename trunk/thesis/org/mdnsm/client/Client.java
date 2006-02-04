@@ -2,6 +2,7 @@ package org.mdnsm.client;
 
 import org.mdnsm.mdns.*;
 import org.mdnsm.server.*;
+
 import java.io.*;
 import java.util.*;
 
@@ -20,13 +21,17 @@ public class Client {
 	
 	private Timer timer;
 	
+	private ServerDaemon daemon;
+	
 	private String os;
 	
 	public Client() throws IOException {
 		serverCache = new DNSCache(100);
 		timer = new Timer();
+		daemon = new ServerDaemon();
 		// TODO: beginnen luisteren naar servers
 		new NICMonitor().start();
+		(new Thread(daemon)).start();
 	}
 	
 	public DNSCache getServerCache() {
@@ -78,6 +83,7 @@ public class Client {
 		if(ips.size() == 1 && servers.keys().hasMoreElements()) {
 			String key = (String)servers.keys().nextElement();
 			((ServiceServer)servers.get(servers.keys().nextElement())).shutdown();
+			daemon.removeIP(key);
 			servers.remove(key);
 			serverCache.clear();
 		}
@@ -97,6 +103,7 @@ public class Client {
 				String ip = (String)iterator.next();
 				if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
+					daemon.addIP(ip);
 					new Thread((ServiceServer)servers.get(ip)).start();
 				}
 				else if(!jmdnss.containsKey(ip)) {
@@ -107,6 +114,7 @@ public class Client {
 						System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 					}
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
+					daemon.addIP(ip);
 					new Thread((ServiceServer)servers.get(ip)).start();
 				}
 			}
@@ -122,6 +130,7 @@ public class Client {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
 				((ServiceServer)servers.get(key)).shutdown();
+				daemon.removeIP(key);
 				((JmDNS)jmdnss.get(key)).close();
 				servers.remove(key);
 				jmdnss.remove(key);
@@ -193,6 +202,52 @@ public class Client {
 			c = is.read();
 		}
 		return result;
+	}
+	
+	/**
+	 * Daemon class taking care of propagation of the associated server on
+	 * other subnets and accumulating information on servers on other subnets.
+	 * 
+	 * @author	Frederic Cremer
+	 *
+	 */
+	public class ServerDaemon implements Runnable {
+		
+		private Vector serverIPs;
+		
+		/**
+		 * Initialize a new server daemon.
+		 */
+		public ServerDaemon() {
+			serverIPs = new Vector();
+			// start timertasks
+		}
+		
+		/**
+		 * Add a new server IP to the list of server IPs.
+		 */
+		public void addIP(String ip) {
+			serverIPs.add(ip);
+		}
+		
+		/**
+		 * Remove a server IP from the list of server IPs.
+		 */
+		public void removeIP(String ip) {
+			serverIPs.remove(ip);
+		}
+		
+		/**
+		 * Run this server daemon.
+		 */
+		public void run() {
+			// controleer binnenkomende datagrampakketten op elk beschikbaar IP
+		}
+		
+		// announcements: timertask
+		
+		// lijst updaten: timertask
+		
 	}
 	
 }

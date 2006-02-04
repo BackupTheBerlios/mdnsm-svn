@@ -7,8 +7,6 @@ import java.net.*;
 import java.util.*;
 import java.util.logging.Level;
 
-import javax.print.CancelablePrintJob;
-
 /**
  * Server recording NS DNS records for other service servers on the
  * network and recording Multicast DNS records for the services available on the
@@ -89,8 +87,7 @@ public class ServiceServer implements Runnable {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
 			exc.printStackTrace();
 		}
-//		 TODO: start UDP daemon and multicast an announcement to all other
-		// servers on the network
+		
 		// TODO: start listening for queries from other servers
 		// TODO: start listening for queries from the local subnet
 		status = SERVER_RUNNING;
