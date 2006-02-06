@@ -16,7 +16,10 @@ import java.net.*;
  */
 public class Client {
 	
+	// TODO: correcte waarden
 	private final int SERVER_RR_TTL = 360000;
+	private final int SERVER_ANN_INTERVAL = 300000;
+	private final int SERVER_CLEAN_INTERVAL = 300000;
 	
 	private Hashtable jmdnss = new Hashtable();
 	private Hashtable servers = new Hashtable();
@@ -24,7 +27,7 @@ public class Client {
 	
 	private Timer timer;
 	
-	private ServerDaemon daemon;
+	private Hashtable serverDaemons;
 	private SSCache ssCache;
 	
 	private String os;
@@ -32,11 +35,9 @@ public class Client {
 	public Client() throws IOException {
 		serverCache = new DNSCache(100);
 		timer = new Timer();
-		daemon = new ServerDaemon();
 		ssCache = new SSCache();
-		// TODO: beginnen luisteren naar servers
+		serverDaemons = new Hashtable();
 		new NICMonitor().start();
-		(new Thread(daemon)).start();
 	}
 	
 	public DNSCache getServerCache() {
@@ -88,7 +89,7 @@ public class Client {
 		if(ips.size() == 1 && servers.keys().hasMoreElements()) {
 			String key = (String)servers.keys().nextElement();
 			((ServiceServer)servers.get(servers.keys().nextElement())).shutdown();
-			daemon.removeIP(key);
+			// TODO: daemon stoppen
 			servers.remove(key);
 			serverCache.clear();
 		}
@@ -108,7 +109,7 @@ public class Client {
 				String ip = (String)iterator.next();
 				if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
-					daemon.addIP(ip);
+					// TODO: daemon starten
 					new Thread((ServiceServer)servers.get(ip)).start();
 				}
 				else if(!jmdnss.containsKey(ip)) {
@@ -119,7 +120,7 @@ public class Client {
 						System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 					}
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
-					daemon.addIP(ip);
+					// TODO: daemon starten
 					new Thread((ServiceServer)servers.get(ip)).start();
 				}
 			}
@@ -135,7 +136,7 @@ public class Client {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
 				((ServiceServer)servers.get(key)).shutdown();
-				daemon.removeIP(key);
+				// TODO: daemon stoppen
 				((JmDNS)jmdnss.get(key)).close();
 				servers.remove(key);
 				jmdnss.remove(key);
@@ -218,75 +219,157 @@ public class Client {
 	 */
 	public class ServerDaemon implements Runnable {
 		
-		private Vector serverIPs;
+		private String ip;
 		private MulticastSocket sendSocket;
-		private MulticastSocket receiveSocket;
+		private DatagramSocket receiveSocket;
+		private boolean RUNNING;
 		
 		private final int DAEMON_PORT = 1337; // TODO: veranderen
 		
 		/**
 		 * Initialize a new server daemon.
 		 */
-		public ServerDaemon() {
-			serverIPs = new Vector();
+		public ServerDaemon(String ip) {
+			this.ip = ip;
 			try {
 				sendSocket = new MulticastSocket(DAEMON_PORT);
 				sendSocket.joinGroup(InetAddress.getByName(DNSConstants.MDNS_GROUP));
-				receiveSocket = new MulticastSocket(DAEMON_PORT);
-				receiveSocket.joinGroup(InetAddress.getByName(DNSConstants.MDNS_GROUP));
+				sendSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByAddress(ip.getBytes())));
+				receiveSocket = new DatagramSocket(DAEMON_PORT, InetAddress.getByAddress(ip.getBytes()));
 			}
 			catch(IOException exc) {
 				System.out.println("Client.ServerDaemon.ServerDaemon: I/O exception occured when trying to initialize multicast sockets.");
 			}
-			// TODO: start timertasks
 		}
 		
 		/**
-		 * Add a new server IP to the list of server IPs.
+		 * Get the IP of the server this daemon runs for.
 		 */
-		public void addIP(String ip) {
-			serverIPs.add(ip);
-		}
-		
-		/**
-		 * Remove a server IP from the list of server IPs.
-		 */
-		public void removeIP(String ip) {
-			serverIPs.remove(ip);
+		public String getIP() {
+			return ip;
 		}
 		
 		/**
 		 * Run this server daemon.
 		 */
 		public void run() {
-			while(serverIPs.size() > 0) {
-				Iterator iterator = serverIPs.iterator();
-				while(iterator.hasNext()) {
-					String ip = (String)iterator.next();
-					try {
-						receiveSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByAddress(ip.getBytes())));
-						DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
-						receiveSocket.receive(packet);
-						ssCache.addServer(getRRFromPacket(packet));
-						// TODO: routeren
-					}
-					catch(SocketException exc) {
-						exc.printStackTrace();
-					}
-					catch(UnknownHostException exc) {
-						exc.printStackTrace();
-					}
-					catch(IOException exc) {
-						exc.printStackTrace();
-					}
+			RUNNING = true;
+			ServerAnnouncer announcer = new ServerAnnouncer();
+			timer.schedule(announcer, 0, SERVER_ANN_INTERVAL);
+			SSCacheCleaner cleaner = new SSCacheCleaner();
+			timer.schedule(cleaner, 0, SERVER_CLEAN_INTERVAL);
+			while(RUNNING) {
+				try {
+					DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
+					receiveSocket.receive(packet);
+					ssCache.addServer(getRRFromPacket(packet));
+					route(packet);
+				}
+				catch(SocketException exc) {
+					exc.printStackTrace();
+				}
+				catch(UnknownHostException exc) {
+					exc.printStackTrace();
+				}
+				catch(IOException exc) {
+					exc.printStackTrace();
 				}
 			}
-			// controleer binnenkomende datagrampakketten op elk beschikbaar IP
+			announcer.cancel();
+			cleaner.cancel();
 		}
 		
-		// TODO: announcements: timertask
+		/**
+		 * Stop this server daemon.
+		 */
+		public void stop() {
+			RUNNING = false;
+		}
 		
-		// TODO: lijst updaten: timertask
+		/**
+		 * Timertask handling announcing the associated server.
+		 * 
+		 * @author	Frederic Cremer
+		 */
+		private class ServerAnnouncer extends TimerTask {
+			
+			public void run() {
+				try {
+					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP())); 
+					sendSocket.send(packet);
+					route(packet);
+				}
+				catch(IOException exc) {
+					exc.printStackTrace();
+				}
+			}
+			
+		}
+		
+		/**
+		 * Timertask handling the periodic cleaning of the service server cache.
+		 * 
+		 * @author	Frederic Cremer
+		 */
+		private class SSCacheCleaner extends TimerTask {
+			
+			public void run() {
+				ssCache.clean();
+			}
+			
+		}
+		
+		/**
+		 * Route the given packet to other local servers.
+		 */
+		private void route(DatagramPacket packet) {
+			Enumeration e = serverDaemons.elements();
+			while(e.hasMoreElements()) {
+				ServerDaemon s = (ServerDaemon)e.nextElement();
+				if(!s.getIP().equals(getIP())) {
+					s.routeExternal(packet);
+				}
+			}
+		}
+		
+		/**
+		 * Route the given packet over the network device associated with this server daemon,
+		 * if appropriate.
+		 */
+		public void routeExternal(DatagramPacket packet) {
+			String subnet = getSubnet(getIP());
+			Vector subnets = getVisitedSubnets(getVisitedFromPacket(packet));
+			if(!subnets.contains(subnet)) {
+				String newSubnets = getVisitedFromPacket(packet) + "," + subnet;
+				try {
+					sendSocket.send(constructPacket(getRRFromPacket(packet).getDomain(), newSubnets));
+				}
+				catch(IOException exc) {
+					exc.printStackTrace();
+				}
+			}
+		}
+		
+		/**
+		 * Get a vector of subnet strings from one comma-separated list of IPs.
+		 */
+		private Vector getVisitedSubnets(String subnets) {
+			Vector result = new Vector();
+			StringTokenizer tok = new StringTokenizer(subnets, ",");
+			while (tok.hasMoreTokens()) {
+				String token = tok.nextToken();
+				result.add(token);
+			}
+			return result;
+		}
+		
+		/**
+		 * Return the subnet from the given IP (first three parts).
+		 */
+		private String getSubnet(String ip) {
+			StringTokenizer tok = new StringTokenizer(ip, ".");
+			return tok.nextToken() + "." + tok.nextToken() + "." + tok.nextToken();
+		}
 		
 		/**
 		 * Construct a datagram packet with a resource record of the given server,
@@ -322,13 +405,13 @@ public class Client {
 			int ipLength = Utils.addThem(bytes[0], bytes[1]);
 			byte[] ipBytes = new byte[ipLength];
 			System.arraycopy(bytes, 4, ipBytes, 0, ipLength);
-			String ip = new String(ipBytes);
+			String newIP = new String(ipBytes);
 			// Construct resource record and return it
-			return new ResourceRecord(ip, Utils.NS, 1, SERVER_RR_TTL, null);
+			return new ResourceRecord(newIP, Utils.NS, 1, SERVER_RR_TTL, null);
 		}
 		
 		/**
-		 * Get the string of already visited IPs from an incoming datagram packet.
+		 * Get the string of already visited subnets from an incoming datagram packet.
 		 */
 		private String getVisitedFromPacket(DatagramPacket packet) {
 			//Get the data from the packet
