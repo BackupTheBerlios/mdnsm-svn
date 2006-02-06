@@ -88,9 +88,14 @@ public class Client {
 		// One IP left, which has a server bound to it
 		if(ips.size() == 1 && servers.keys().hasMoreElements()) {
 			String key = (String)servers.keys().nextElement();
-			((ServiceServer)servers.get(servers.keys().nextElement())).shutdown();
-			// TODO: daemon stoppen
+			// Stop the associated server
+			((ServiceServer)servers.get(key)).shutdown();
+			// Stop the associated server daemon
+			((ServerDaemon)serverDaemons.get(key)).stop();
+			// Remove hashtable entries
 			servers.remove(key);
+			serverDaemons.remove(key);
+			// Clear the server cache (redundant, cache should already be empty)
 			serverCache.clear();
 		}
 		// One IP detected, no active JmDNS instances (typically at startup with a single NIC).
@@ -107,11 +112,14 @@ public class Client {
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
 				String ip = (String)iterator.next();
+				// IP already existed before without server, start server and server daemon for it
 				if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
-					// TODO: daemon starten
+					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServiceServer)servers.get(ip)).start();
+					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
+				// IP is new, start JmDNS instance, server and server daemon for it
 				else if(!jmdnss.containsKey(ip)) {
 					try {
 						jmdnss.put(ip, new JmDNS(ip));
@@ -120,8 +128,9 @@ public class Client {
 						System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 					}
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
-					// TODO: daemon starten
+					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServiceServer)servers.get(ip)).start();
+					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
 			}
 		}
@@ -136,9 +145,10 @@ public class Client {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
 				((ServiceServer)servers.get(key)).shutdown();
-				// TODO: daemon stoppen
+				((ServerDaemon)serverDaemons.get(key)).stop();
 				((JmDNS)jmdnss.get(key)).close();
 				servers.remove(key);
+				serverDaemons.remove(key);
 				jmdnss.remove(key);
 			}
 		}
@@ -154,8 +164,7 @@ public class Client {
 		else if(os.equals("Linux")){
 			return getLinuxIPConfiguration();
 		}
-		// TODO: exception gooien als besturingssysteem niet herkend wordt
-		else return null;
+		else throw new IllegalArgumentException("Sorry, your OS is not supported by mDNSm.");
 	}
 	
 	/**
