@@ -55,7 +55,8 @@ public class ResourceRecord
         this.rrclass = rrclass;
         this.ttl = ttl;
         this.rdata = rdata;
-        name = Utils.convertString (domain);
+        name = domain.getBytes();
+        //name = Utils.convertString (domain);
     }
 
     /**

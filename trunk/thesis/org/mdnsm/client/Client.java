@@ -25,6 +25,7 @@ public class Client {
 	private Timer timer;
 	
 	private ServerDaemon daemon;
+	private SSCache ssCache;
 	
 	private String os;
 	
@@ -32,6 +33,7 @@ public class Client {
 		serverCache = new DNSCache(100);
 		timer = new Timer();
 		daemon = new ServerDaemon();
+		ssCache = new SSCache();
 		// TODO: beginnen luisteren naar servers
 		new NICMonitor().start();
 		(new Thread(daemon)).start();
@@ -217,13 +219,26 @@ public class Client {
 	public class ServerDaemon implements Runnable {
 		
 		private Vector serverIPs;
+		private MulticastSocket sendSocket;
+		private MulticastSocket receiveSocket;
+		
+		private final int DAEMON_PORT = 1337; // TODO: veranderen
 		
 		/**
 		 * Initialize a new server daemon.
 		 */
 		public ServerDaemon() {
 			serverIPs = new Vector();
-			// start timertasks
+			try {
+				sendSocket = new MulticastSocket(DAEMON_PORT);
+				sendSocket.joinGroup(InetAddress.getByName(DNSConstants.MDNS_GROUP));
+				receiveSocket = new MulticastSocket(DAEMON_PORT);
+				receiveSocket.joinGroup(InetAddress.getByName(DNSConstants.MDNS_GROUP));
+			}
+			catch(IOException exc) {
+				System.out.println("Client.ServerDaemon.ServerDaemon: I/O exception occured when trying to initialize multicast sockets.");
+			}
+			// TODO: start timertasks
 		}
 		
 		/**
@@ -244,12 +259,34 @@ public class Client {
 		 * Run this server daemon.
 		 */
 		public void run() {
+			while(serverIPs.size() > 0) {
+				Iterator iterator = serverIPs.iterator();
+				while(iterator.hasNext()) {
+					String ip = (String)iterator.next();
+					try {
+						receiveSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByAddress(ip.getBytes())));
+						DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
+						receiveSocket.receive(packet);
+						ssCache.addServer(getRRFromPacket(packet));
+						// TODO: routeren
+					}
+					catch(SocketException exc) {
+						exc.printStackTrace();
+					}
+					catch(UnknownHostException exc) {
+						exc.printStackTrace();
+					}
+					catch(IOException exc) {
+						exc.printStackTrace();
+					}
+				}
+			}
 			// controleer binnenkomende datagrampakketten op elk beschikbaar IP
 		}
 		
-		// announcements: timertask
+		// TODO: announcements: timertask
 		
-		// lijst updaten: timertask
+		// TODO: lijst updaten: timertask
 		
 		/**
 		 * Construct a datagram packet with a resource record of the given server,
@@ -259,7 +296,7 @@ public class Client {
 			// Get the numbers required to calculate the byte array length
 			int ipLength = ip.length();
 			int visitedLength = visited.length();
-			byte[] rr = (new ResourceRecord(ip, Utils.NS, 1, SERVER_RR_TTL, null)).getRR();
+			byte[] rr = (new ResourceRecord(ip, Utils.NS, 1, SERVER_RR_TTL, new byte[0])).getRR();
 			byte[] vb = visited.getBytes();
 			// Construct the byte array
 			byte[] bytes = new byte[ipLength+visitedLength+rr.length+vb.length];
@@ -303,7 +340,7 @@ public class Client {
 			System.arraycopy(bytes, 4+ipLength+10, visitedBytes, 0, visitedLength);
 			return new String(visitedBytes);
 		}
-		
-	}
 	
+	}
+		
 }
