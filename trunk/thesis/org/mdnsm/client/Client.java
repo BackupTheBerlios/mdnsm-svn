@@ -8,9 +8,8 @@ import java.util.*;
 import java.net.*;
 
 /**
- * Temporary (?) class, which contains the main method starting all
- * of it: creating an mDNS thread, possibly starting a DNS server,
- * passing the mDNS thread on as a parameter to the DNS server.
+ * TODO: beschrijving
+ * TODO: netjes groeperen, benoemen van en waarde geven aan final variabelen
  * 
  * @author	Frederic Cremer
  */
@@ -21,27 +20,54 @@ public class Client {
 	private final int SERVER_ANN_INTERVAL = 300000;
 	private final int SERVER_CLEAN_INTERVAL = 300000;
 	
+	// JmDNS instances associated with this client
 	private Hashtable jmdnss = new Hashtable();
+	// Server instances associated with this client
 	private Hashtable servers = new Hashtable();
+	// Server cache used by server instances to share accumulated data
 	private DNSCache serverCache;
 	
 	private Timer timer;
 	
+	// Server daemons associated with this clients server instances
 	private Hashtable serverDaemons;
+	// List of other servers on the network
 	private SSCache ssCache;
+	
+	// Listener for usable server information
+	private ServerListener serverListener;
+	// List of servers this client can contact to get information
+	// (should not be used when this client has server instances running)
+	private Vector reachableServers;
 	
 	private String os;
 	
 	public Client() throws IOException {
+		initData();
+		new NICMonitor().start();
+	}
+	
+	/**
+	 * Initialize this client's data structures.
+	 */
+	private void initData() {
 		serverCache = new DNSCache(100);
 		timer = new Timer();
 		ssCache = new SSCache();
 		serverDaemons = new Hashtable();
-		new NICMonitor().start();
+		reachableServers = new Vector();
+		serverListener = new ServerListener();
 	}
 	
 	public DNSCache getServerCache() {
 		return serverCache;
+	}
+	
+	/**
+	 * Check whether this client has server instances running.
+	 */
+	public boolean hasServers() {
+		return servers.size() > 0;
 	}
 	
 	/**
@@ -97,11 +123,16 @@ public class Client {
 			serverDaemons.remove(key);
 			// Clear the server cache (redundant, cache should already be empty)
 			serverCache.clear();
+			// Reactivate the server listener (one server left implies that before multiple server instances
+			// were running, and thus the server listener was deactivated)
+			((JmDNS)jmdnss.get(key)).addServiceListener("_sserver._udp.*.local.", serverListener);
 		}
 		// One IP detected, no active JmDNS instances (typically at startup with a single NIC).
 		if(ips.size() == 1 && jmdnss.size() == 0) {
 			try {
 				jmdnss.put((String)ips.get(0), new JmDNS((String)ips.get(0)));
+				// Activate server listener
+				((JmDNS)jmdnss.get((String)ips.get(0))).addServiceListener("_sserver._udp.*.local.", serverListener);
 			}
 			catch(IOException exc) {
 				System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
@@ -109,6 +140,10 @@ public class Client {
 		}
 		// Multiple IPs detected
 		else if(ips.size() > 1) {
+			// Coming from 1 IP, thus meaning activated server listener, implies deactivating the server listener
+			if(jmdnss.size() == 1) {
+				((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).removeServiceListener("_sserver._udp.*.local.", serverListener);
+			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
 				String ip = (String)iterator.next();
@@ -217,6 +252,56 @@ public class Client {
 			c = is.read();
 		}
 		return result;
+	}
+	
+	/**
+	 * Inner class implementing the ServiceListener interface to handle
+	 * the listening to server types.
+	 * 
+	 * @author	Frederic Cremer
+	 */
+	private class ServerListener implements ServiceListener {
+		
+		/**
+		 * New server found, add to reachable server list.
+		 */
+		public void serviceAdded(ServiceEvent event) {
+			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
+			removeInfo(info);
+			reachableServers.add(info);
+		}
+		
+		/**
+		 * Server has been stopped, remove from reachable server list.
+		 */
+		public void serviceRemoved(ServiceEvent event) {
+			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
+			removeInfo(info);
+		}
+		
+		/**
+		 * Server info has been updated, update reachable server list.
+		 */
+		public void serviceResolved(ServiceEvent event) {
+			ServiceInfo info = event.getInfo();
+			removeInfo(info);
+			reachableServers.add(info);
+		}
+		
+		/**
+		 * Remove the given server information from the list of reachable servers.
+		 */
+		private void removeInfo(ServiceInfo info) {
+			ServiceInfo TBR = null;
+			for(Iterator i = reachableServers.iterator(); i.hasNext();) {
+				ServiceInfo server = (ServiceInfo)i.next();
+				if(server.getType().equals(info.getType()) && server.getName().equals(info.getName())) {
+					TBR = server;
+				}
+			}
+			reachableServers.remove(TBR);
+		}
+		
 	}
 	
 	/**
