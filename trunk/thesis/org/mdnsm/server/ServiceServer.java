@@ -252,6 +252,10 @@ public class ServiceServer implements Runnable {
 		return client;
 	}
 	
+	public void requestInfo() {
+		
+	}
+	
 	/**
 	 * Shutdown this DNS server by multicasting a message to all local clients,
 	 * shutting down the UDP daemon and removing any service listeners from the
@@ -259,11 +263,6 @@ public class ServiceServer implements Runnable {
 	 */
 	public void shutdown() {
 		status = SERVER_STOPPED;
-	}
-	
-	// obsolete, tenzij gebruiken voor name records (to be decided)
-	public static Zone getZone(String zone) {
-		return null;
 	}
 
 }

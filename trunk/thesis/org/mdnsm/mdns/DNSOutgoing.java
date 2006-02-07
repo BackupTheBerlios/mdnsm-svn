@@ -17,7 +17,7 @@ import java.util.logging.Logger;
  * @version %I%, %G%
  * @author	Arthur van Hoff, Rick Blair, Werner Randelshofer
  */
-final class DNSOutgoing
+public final class DNSOutgoing
 {
     private static Logger logger = Logger.getLogger(DNSOutgoing.class.toString());
     int id;
@@ -36,7 +36,7 @@ final class DNSOutgoing
     /**
      * Create an outgoing multicast query or response.
      */
-    DNSOutgoing(int flags)
+    public DNSOutgoing(int flags)
     {
         this(flags, true);
     }
@@ -44,7 +44,7 @@ final class DNSOutgoing
     /**
      * Create an outgoing query or response.
      */
-    DNSOutgoing(int flags, boolean multicast)
+    public DNSOutgoing(int flags, boolean multicast)
     {
         this.flags = flags;
         this.multicast = multicast;
@@ -56,7 +56,7 @@ final class DNSOutgoing
     /**
      * Add a question to the message.
      */
-    void addQuestion(DNSQuestion rec) throws IOException
+    public void addQuestion(DNSQuestion rec) throws IOException
     {
         if (numAnswers > 0 || numAuthorities > 0 || numAdditionals > 0)
         {
@@ -69,7 +69,7 @@ final class DNSOutgoing
     /**
      * Add an answer if it is not suppressed.
      */
-    void addAnswer(DNSIncoming in, DNSRecord rec) throws IOException
+    public void addAnswer(DNSIncoming in, DNSRecord rec) throws IOException
     {
         if (numAuthorities > 0 || numAdditionals > 0)
         {
@@ -84,7 +84,7 @@ final class DNSOutgoing
     /**
      * Add an additional answer to the record. Omit if there is no room.
      */
-    void addAdditionalAnswer(DNSIncoming in, DNSRecord rec) throws IOException
+    public void addAdditionalAnswer(DNSIncoming in, DNSRecord rec) throws IOException
     {
         if ((off < DNSConstants.MAX_MSG_TYPICAL - 200) && !rec.suppressedBy(in))
         {
@@ -96,7 +96,7 @@ final class DNSOutgoing
     /**
      * Add an answer to the message.
      */
-    void addAnswer(DNSRecord rec, long now) throws IOException
+    public void addAnswer(DNSRecord rec, long now) throws IOException
     {
         if (numAuthorities > 0 || numAdditionals > 0)
         {
@@ -117,7 +117,7 @@ final class DNSOutgoing
     /**
      * Add an authorative answer to the message.
      */
-    void addAuthorativeAnswer(DNSRecord rec) throws IOException
+    public void addAuthorativeAnswer(DNSRecord rec) throws IOException
     {
         if (numAdditionals > 0)
         {
@@ -131,7 +131,7 @@ final class DNSOutgoing
 
     }
 
-    void writeByte(int value) throws IOException
+    public void writeByte(int value) throws IOException
     {
         if (off >= data.length)
         {
@@ -140,7 +140,7 @@ final class DNSOutgoing
         data[off++] = (byte) value;
     }
 
-    void writeBytes(String str, int off, int len) throws IOException
+    public void writeBytes(String str, int off, int len) throws IOException
     {
         for (int i = 0; i < len; i++)
         {
@@ -148,7 +148,7 @@ final class DNSOutgoing
         }
     }
 
-    void writeBytes(byte data[]) throws IOException
+    public void writeBytes(byte data[]) throws IOException
     {
         if (data != null)
         {
@@ -156,7 +156,7 @@ final class DNSOutgoing
         }
     }
 
-    void writeBytes(byte data[], int off, int len) throws IOException
+    public void writeBytes(byte data[], int off, int len) throws IOException
     {
         for (int i = 0; i < len; i++)
         {
@@ -164,19 +164,19 @@ final class DNSOutgoing
         }
     }
 
-    void writeShort(int value) throws IOException
+    public void writeShort(int value) throws IOException
     {
         writeByte(value >> 8);
         writeByte(value);
     }
 
-    void writeInt(int value) throws IOException
+    public void writeInt(int value) throws IOException
     {
         writeShort(value >> 16);
         writeShort(value);
     }
 
-    void writeUTF(String str, int off, int len) throws IOException
+    public void writeUTF(String str, int off, int len) throws IOException
     {
         // compute utf length
         int utflen = 0;
@@ -226,7 +226,7 @@ final class DNSOutgoing
         }
     }
 
-    void writeName(String name) throws IOException
+    public void writeName(String name) throws IOException
     {
         while (true)
         {
@@ -264,14 +264,14 @@ final class DNSOutgoing
         }
     }
 
-    void writeQuestion(DNSQuestion question) throws IOException
+    public void writeQuestion(DNSQuestion question) throws IOException
     {
         writeName(question.name);
         writeShort(question.type);
         writeShort(question.clazz);
     }
 
-    void writeRecord(DNSRecord rec, long now) throws IOException
+    public void writeRecord(DNSRecord rec, long now) throws IOException
     {
         int save = off;
         try
@@ -297,7 +297,7 @@ final class DNSOutgoing
     /**
      * Finish the message before sending it off.
      */
-    void finish() throws IOException
+    public void finish() throws IOException
     {
         int save = off;
         off = 0;
@@ -311,7 +311,7 @@ final class DNSOutgoing
         off = save;
     }
 
-    boolean isQuery()
+    public boolean isQuery()
     {
         return (flags & DNSConstants.FLAGS_QR_MASK) == DNSConstants.FLAGS_QR_QUERY;
     }

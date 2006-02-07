@@ -13,14 +13,14 @@ import java.util.logging.Logger;
  * @version %I%, %G%
  * @author	Arthur van Hoff
  */
-final class DNSQuestion extends DNSEntry
+public final class DNSQuestion extends DNSEntry
 {
     private static Logger logger = Logger.getLogger(DNSQuestion.class.toString());
 
     /**
      * Create a question.
      */
-    DNSQuestion(String name, int type, int clazz)
+    public DNSQuestion(String name, int type, int clazz)
     {
         super(name, type, clazz);
     }
@@ -28,7 +28,7 @@ final class DNSQuestion extends DNSEntry
     /**
      * Check if this question is answered by a given DNS record.
      */
-    boolean answeredBy(DNSRecord rec)
+    public boolean answeredBy(DNSRecord rec)
     {
         return (clazz == rec.clazz) && ((type == rec.type) || (type == DNSConstants.TYPE_ANY)) &&
             name.equals(rec.name);

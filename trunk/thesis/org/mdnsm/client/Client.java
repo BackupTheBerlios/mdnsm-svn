@@ -5,6 +5,7 @@ import org.mdnsm.server.*;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.Level;
 import java.net.*;
 
 /**
@@ -40,6 +41,9 @@ public class Client {
 	// (should not be used when this client has server instances running)
 	private Vector reachableServers;
 	
+	// Listeners for information
+	private Hashtable infoListeners;
+	
 	private String os;
 	
 	public Client() throws IOException {
@@ -57,6 +61,7 @@ public class Client {
 		serverDaemons = new Hashtable();
 		reachableServers = new Vector();
 		serverListener = new ServerListener();
+		infoListeners = new Hashtable();
 	}
 	
 	public DNSCache getServerCache() {
@@ -69,6 +74,10 @@ public class Client {
 	public boolean hasServers() {
 		return servers.size() > 0;
 	}
+	
+	/*
+	 * IP monitoring
+	 */
 	
 	/**
 	 * Inner class monitoring the status of the network interface cards of this
@@ -254,6 +263,10 @@ public class Client {
 		return result;
 	}
 	
+	/*
+	 * Listening to usable servers
+	 */
+	
 	/**
 	 * Inner class implementing the ServiceListener interface to handle
 	 * the listening to server types.
@@ -303,6 +316,10 @@ public class Client {
 		}
 		
 	}
+	
+	/*
+	 * Spreading and storing (local) server information
+	 */
 	
 	/**
 	 * Daemon class taking care of propagation of the associated server on
@@ -519,5 +536,80 @@ public class Client {
 		}
 	
 	}
+	
+	/*
+	 * Contacting usable servers
+	 */
+	
+	/**
+	 * Request information about the given type and feed the information to the
+	 * given listener.
+	 */
+	public void requestInfo(String type, ServiceListener listener) {
+		type = type.toLowerCase();
+		if(infoListeners.containsKey(type)) {
+			Vector listeners = (Vector)infoListeners.get(type);
+			listeners.add(listener);
+		}
+		else {
+			Vector vector = new Vector();
+			vector.add(listener);
+			infoListeners.put(type, vector);
+		}
+		resolveInfo(type);
+	}
+	
+	private void resolveInfo(String type) {
+		if(hasServers()) {
+			// TODO: lokale servers direct aanspreken
+		}
+		else {
+			// TODO: nieuwe ServiceInfoResolver thread opstarten
+		}
+	}
+	
+	/**
+     * The ServiceInfoResolver queries up to three times consecutively for
+     * a service info, and then removes itself from the timer.
+     * This code is based on the JmDNS code by Arthur van Hoff, Rick Blair,
+     * Jeff Sonstein, Werner Randelshofer, Pierre Frisch and Scott Lewis,
+     * adapted (and simplified) for this unicast case.
+     * 
+     * @author	Arthur van Hoff, Rick Blair, Jeff Sonstein, Werner Randelshofer,
+     * 			Pierre Frisch, Scott Lewis
+     * @author	Frederic Cremer
+     */
+    private class ServiceInfoResolver extends TimerTask {
+        // Number of queries already sent
+        int count = 0;
+        private ServiceInfo info;
+
+        public ServiceInfoResolver(ServiceInfo info) {
+            this.info = info;
+        }
+
+        public void start() {
+            timer.schedule(this, DNSConstants.QUERY_WAIT_INTERVAL, DNSConstants.QUERY_WAIT_INTERVAL);
+        }
+
+        public void run() {
+            try {
+            	if (count++ < 3) {
+            		long now = System.currentTimeMillis();
+            		DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
+            		out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
+            		out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
+            		send(out);
+            	}
+            	else {
+            		// After three queries, we can quit.
+            		cancel();
+            	}
+            }
+            catch(IOException exc) {
+            	
+            }
+        }
+    }
 		
 }
