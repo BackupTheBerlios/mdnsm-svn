@@ -9,6 +9,11 @@ package org.mdnsm.server;
 
 public class Utils
 {
+	// Port on which servers contact clients
+	public static final int SERVER_CLIENT_COMM = 1338;
+	// Port on which clients contact servers
+	public static final int CLIENT_SERVER_COMM = 1339;
+	
     /** The request/respose numbers */
     public static final int A		= 1;
     public static final int NS		= 2;

@@ -23,8 +23,6 @@ public class Client {
 	
 	// Port on which the server daemons communicate
 	private final int DAEMON_PORT = 1337;
-	// Port on which servers and clients communicate
-	private final int SERVER_CLIENT_COMM = 1338;
 	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss = new Hashtable();
@@ -73,7 +71,7 @@ public class Client {
 		serverListener = new ServerListener();
 		infoListeners = new Hashtable();
 		try {
-			socket = new DatagramSocket(SERVER_CLIENT_COMM);
+			socket = new DatagramSocket(Utils.SERVER_CLIENT_COMM);
 		}
 		catch(SocketException exc) {
 			exc.printStackTrace();
@@ -181,6 +179,7 @@ public class Client {
 				// IP already existed before without server, start server and server daemon for it
 				if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
+					reachableServers.add(((ServiceServer)servers.get(ip)).getInfo());
 					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
@@ -193,6 +192,7 @@ public class Client {
 						System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 					}
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
+					reachableServers.add(((ServiceServer)servers.get(ip)).getInfo());
 					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
@@ -202,12 +202,19 @@ public class Client {
 	
 	/**
 	 * Remove obsolete servers and JmDNS instances.
+	 * Non-existing IP means:
+	 * 		- removing the server from the list of reachable servers
+	 * 		- shutting down the server instance
+	 * 		- shutting down the associated server daemon
+	 * 		- shutting down the JmDNS instance
+	 * 		- clearing the associated data structures
 	 */
 	private void removeServers(Vector ips) {
 		Enumeration existingServers = servers.keys();
 		while(existingServers.hasMoreElements()) {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
+				reachableServers.remove(((ServiceServer)servers.get(key)).getInfo());
 				((ServiceServer)servers.get(key)).shutdown();
 				((ServerDaemon)serverDaemons.get(key)).stop();
 				((JmDNS)jmdnss.get(key)).close();
@@ -574,16 +581,7 @@ public class Client {
 			vector.add(listener);
 			infoListeners.put(type, vector);
 		}
-		resolveInfo(type);
-	}
-	
-	private void resolveInfo(String type) {
-		if(hasServers()) {
-			// TODO: lokale servers direct aanspreken
-		}
-		else {
-			(new Thread(new ServiceResolver(type))).start();
-		}
+		(new Thread(new ServiceResolver(type))).start();
 	}
 	
 	/**
@@ -695,7 +693,7 @@ public class Client {
         if (!out.isEmpty()) {
         	for(Iterator i = reachableServers.iterator(); i.hasNext();) {
         		String ip = (String)i.next();
-        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), SERVER_CLIENT_COMM);
+        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.CLIENT_SERVER_COMM);
         		try {
         			DNSIncoming msg = new DNSIncoming(packet);
         		}

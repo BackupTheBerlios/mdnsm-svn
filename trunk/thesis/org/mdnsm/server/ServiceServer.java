@@ -33,6 +33,7 @@ public class ServiceServer {
 	private Timer timer;
 	
 	private ClientListener clientListener;
+	private DatagramSocket clientSocket;
 	
 	/**
 	 * Initialize a new server as a part of the given client.
@@ -45,21 +46,7 @@ public class ServiceServer {
 	 * 			The IP address of the network interface card on which this server is listening.
 	 */
 	public ServiceServer(Client client, JmDNS jmdns, String hostAddress) {
-		if(client == null) {
-			throw new IllegalArgumentException("ServiceServer.ServiceServer: invalid client specified.");
-		}
-		this.client = client;
-		
-		if(jmdns == null) {
-			throw new IllegalArgumentException("ServiceServer.ServiceServer: invalid JmDNS instance specified.");
-		}
-		this.jmdns = jmdns;
-		
-		if(hostAddress == null) {
-			throw new IllegalArgumentException("ServiceServer.ServiceServer: invalid host name specified.");
-		}
-		this.hostAddress = hostAddress;
-		timer = new Timer();
+		initData(client, jmdns, hostAddress);
 		// Register this server as a service
 		try {
 			// TODO: deftige benaming voor service servers en deftige beschrijving
@@ -85,10 +72,31 @@ public class ServiceServer {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
 			exc.printStackTrace();
 		}
-		clientListener = new ClientListener();
+		
+		// Start listening to queries from the local subnet
 		(new Thread(clientListener)).start();
+		
 		// TODO: start listening for queries from other servers
-		// TODO: start listening for queries from the local subnet
+	}
+	
+	/**
+	 * Initialize the data structures of this service server.
+	 */
+	private void initData(Client client, JmDNS jmdns, String hostAddress) {
+		this.client = client;
+		this.jmdns = jmdns;
+		this.hostAddress = hostAddress;
+		timer = new Timer();
+		try {
+			clientSocket = new DatagramSocket(Utils.CLIENT_SERVER_COMM, InetAddress.getByName(getHostAddress()));
+		}
+		catch(SocketException exc) {
+			exc.printStackTrace();
+		}
+		catch(UnknownHostException exc) {
+			exc.printStackTrace();
+		}
+		clientListener = new ClientListener();
 	}
 	
 	/**
@@ -215,8 +223,11 @@ public class ServiceServer {
 		return client;
 	}
 	
-	public void requestInfo() {
-		
+	/**
+	 * Get the service information description of this service server.
+	 */
+	public ServiceInfo getInfo() {
+		return serviceInfo;
 	}
 	
 	/**
@@ -230,9 +241,27 @@ public class ServiceServer {
 		private boolean needed = true;
 		
 		public void run() {
-			while(needed) {
-				
-			}
+			try {
+            	byte buf[] = new byte[DNSConstants.MAX_MSG_ABSOLUTE];
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                while (needed) {
+                    packet.setLength(buf.length);
+                    clientSocket.receive(packet);
+                    try {
+                    	DNSIncoming msg = new DNSIncoming(packet);
+                    	// We don't really expect answers here
+                    	if(msg.isQuery()) {
+                    		// TODO: 
+                    	}
+                    }
+                    catch (IOException exc) {
+                        exc.printStackTrace();
+                    }
+                }
+            }
+            catch (IOException exc) {
+            	exc.printStackTrace();
+            }
 		}
 		
 		public void stop() {
