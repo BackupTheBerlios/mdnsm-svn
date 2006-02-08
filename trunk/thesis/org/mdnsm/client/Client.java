@@ -51,6 +51,8 @@ public class Client {
 	
 	// The socket for client server communication
 	private DatagramSocket socket;
+	// The socket listener for non-server clients
+	private SocketListener socketListener;
 	
 	private String os;
 	
@@ -76,6 +78,7 @@ public class Client {
 		catch(SocketException exc) {
 			exc.printStackTrace();
 		}
+		socketListener = new SocketListener();
 	}
 	
 	public DNSCache getServerCache() {
@@ -149,6 +152,8 @@ public class Client {
 			// Reactivate the server listener (one server left implies that before multiple server instances
 			// were running, and thus the server listener was deactivated)
 			((JmDNS)jmdnss.get(key)).addServiceListener("_sserver._udp.*.local.", serverListener);
+			// Reactivate the socket listener
+			(new Thread(socketListener)).start();
 		}
 		// One IP detected, no active JmDNS instances (typically at startup with a single NIC).
 		if(ips.size() == 1 && jmdnss.size() == 0) {
@@ -156,6 +161,8 @@ public class Client {
 				jmdnss.put((String)ips.get(0), new JmDNS((String)ips.get(0)));
 				// Activate server listener
 				((JmDNS)jmdnss.get((String)ips.get(0))).addServiceListener("_sserver._udp.*.local.", serverListener);
+				// Activate the socket listener
+				(new Thread(socketListener)).start();
 			}
 			catch(IOException exc) {
 				System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
@@ -163,9 +170,10 @@ public class Client {
 		}
 		// Multiple IPs detected
 		else if(ips.size() > 1) {
-			// Coming from 1 IP, thus meaning activated server listener, implies deactivating the server listener
+			// Coming from 1 IP, thus meaning activated server listener, implies deactivating the server listener and socket listener
 			if(jmdnss.size() == 1) {
 				((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).removeServiceListener("_sserver._udp.*.local.", serverListener);
+				socketListener.stop();
 			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
@@ -174,7 +182,6 @@ public class Client {
 				if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
 					serverDaemons.put(ip, new ServerDaemon(ip));
-					new Thread((ServiceServer)servers.get(ip)).start();
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
 				// IP is new, start JmDNS instance, server and server daemon for it
@@ -187,7 +194,6 @@ public class Client {
 					}
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
 					serverDaemons.put(ip, new ServerDaemon(ip));
-					new Thread((ServiceServer)servers.get(ip)).start();
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
 			}
@@ -715,7 +721,7 @@ public class Client {
     	
     	public void run() {
             try {
-                byte buf[] = new byte[DNSConstants.MAX_MSG_ABSOLUTE];
+            	byte buf[] = new byte[DNSConstants.MAX_MSG_ABSOLUTE];
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 while (needed) {
                     packet.setLength(buf.length);
@@ -736,6 +742,13 @@ public class Client {
             	exc.printStackTrace();
             }
         }
+    	
+    	/**
+    	 * Stop this socket listener.
+    	 */
+    	public void stop() {
+    		needed = false;
+    	}
     	
     }
     	

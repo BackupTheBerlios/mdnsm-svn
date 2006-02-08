@@ -18,7 +18,7 @@ import java.util.logging.Level;
  * @author Frederic Cremer
  */
 
-public class ServiceServer implements Runnable {
+public class ServiceServer {
 	
 	private Client client;
 	private JmDNS jmdns;
@@ -31,10 +31,8 @@ public class ServiceServer implements Runnable {
 	private int infoTtl = 360000;
 	
 	private Timer timer;
-	private final int SERVER_STOPPED = 0;
-	private final int SERVER_RUNNING = 1;
-	private int status;
-	private Thread statusMonitor;
+	
+	private ClientListener clientListener;
 	
 	/**
 	 * Initialize a new server as a part of the given client.
@@ -87,45 +85,10 @@ public class ServiceServer implements Runnable {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
 			exc.printStackTrace();
 		}
-		
+		clientListener = new ClientListener();
+		(new Thread(clientListener)).start();
 		// TODO: start listening for queries from other servers
 		// TODO: start listening for queries from the local subnet
-		status = SERVER_RUNNING;
-	}
-	
-	public void run() {
-		while(status == SERVER_RUNNING) {
-			try {
-				Thread.sleep(100);
-			}
-			catch(Exception exc) {
-				
-			}
-		}
-		jmdns.unregisterService(serviceInfo);
-		// TODO: boodschap naar alle andere service servers
-		
-		boolean left = true;
-		// Remove server PTR records from the server cache
-		DNSEntry entry = client.getServerCache().get(new DNSRecord.Pointer(serviceInfo.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getQualifiedName()));
-		while(left) {
-			left = client.getServerCache().remove(entry);
-		}
-		left = true;
-		// Remove server SRV records from the server cache
-		entry = client.getServerCache().get(new DNSRecord.Service(serviceInfo.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getPriority(), serviceInfo.getWeight(), serviceInfo.getPort(), jmdns.getLocalHost().getName()));
-		while(left) {
-			left = client.getServerCache().remove(entry);
-		}
-		left = true;
-		// Remove server TXT records from the server cache
-		entry = client.getServerCache().get(new DNSRecord.Text(serviceInfo.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getTextBytes()));
-		while(left) {
-			left = client.getServerCache().remove(entry);
-		}
-		
-		System.out.println("Service server stopped for "+hostAddress+".");
-		// TODO: service info, jmdns, client en hostadres nog op null zetten
 	}
 	
 	/**
@@ -257,12 +220,58 @@ public class ServiceServer implements Runnable {
 	}
 	
 	/**
+	 * Inner class listening to queries from clients.
+	 * Loosely based on JmDNS-code.
+	 * 
+	 * @author	Frederic Cremer
+	 */
+	private class ClientListener implements Runnable {
+		
+		private boolean needed = true;
+		
+		public void run() {
+			while(needed) {
+				
+			}
+		}
+		
+		public void stop() {
+			needed = false;
+		}
+		
+	}
+	
+	/**
 	 * Shutdown this DNS server by multicasting a message to all local clients,
 	 * shutting down the UDP daemon and removing any service listeners from the
 	 * mDNS daemon.
 	 */
 	public void shutdown() {
-		status = SERVER_STOPPED;
+		clientListener.stop();
+		
+		jmdns.unregisterService(serviceInfo);
+		
+		boolean left = true;
+		// Remove server PTR records from the server cache
+		DNSEntry entry = client.getServerCache().get(new DNSRecord.Pointer(serviceInfo.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getQualifiedName()));
+		while(left) {
+			left = client.getServerCache().remove(entry);
+		}
+		left = true;
+		// Remove server SRV records from the server cache
+		entry = client.getServerCache().get(new DNSRecord.Service(serviceInfo.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getPriority(), serviceInfo.getWeight(), serviceInfo.getPort(), jmdns.getLocalHost().getName()));
+		while(left) {
+			left = client.getServerCache().remove(entry);
+		}
+		left = true;
+		// Remove server TXT records from the server cache
+		entry = client.getServerCache().get(new DNSRecord.Text(serviceInfo.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getTextBytes()));
+		while(left) {
+			left = client.getServerCache().remove(entry);
+		}
+		
+		System.out.println("Service server stopped for "+hostAddress+".");
+		// TODO: service info, jmdns, client en hostadres nog op null zetten
 	}
 
 }
