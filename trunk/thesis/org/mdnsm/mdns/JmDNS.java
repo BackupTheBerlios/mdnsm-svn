@@ -373,6 +373,13 @@ public class JmDNS
     {
         return socket.getInterface();
     }
+    
+    /**
+     * Get the services registered at this JmDNS instance.
+     */
+    public Map getServices() {
+    	return services;
+    }
 
     /**
      * Get service information. If the information is not cached, the method

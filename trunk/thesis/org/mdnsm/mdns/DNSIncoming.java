@@ -21,7 +21,7 @@ import java.util.logging.Logger;
  * @version %I%, %G%
  * @author	Arthur van Hoff, Werner Randelshofer, Pierre Frisch
  */
-final class DNSIncoming
+public final class DNSIncoming
 {
     private static Logger logger = Logger.getLogger(DNSIncoming.class.toString());
     // Implementation note: This vector should be immutable.
@@ -49,7 +49,7 @@ final class DNSIncoming
     /**
      * Parse a message from a datagram packet.
      */
-    DNSIncoming(DatagramPacket packet) throws IOException
+    public DNSIncoming(DatagramPacket packet) throws IOException
     {
         this.packet = packet;
         this.data = packet.getData();
@@ -160,7 +160,7 @@ final class DNSIncoming
     /**
      * Check if the message is a query.
      */
-    boolean isQuery()
+    public boolean isQuery()
     {
         return (flags & DNSConstants.FLAGS_QR_MASK) == DNSConstants.FLAGS_QR_QUERY;
     }
@@ -168,7 +168,7 @@ final class DNSIncoming
     /**
      * Check if the message is truncated.
      */
-    boolean isTruncated()
+    public boolean isTruncated()
     {
         return (flags & DNSConstants.FLAGS_TC) != 0;
     }
@@ -176,7 +176,7 @@ final class DNSIncoming
     /**
      * Check if the message is a response.
      */
-    boolean isResponse()
+    public boolean isResponse()
     {
         return (flags & DNSConstants.FLAGS_QR_MASK) == DNSConstants.FLAGS_QR_RESPONSE;
     }
@@ -288,7 +288,7 @@ final class DNSIncoming
     /**
      * Debugging.
      */
-    String print(boolean dump)
+    public String print(boolean dump)
     {
         StringBuffer buf = new StringBuffer();
         buf.append(toString() + "\n");
@@ -425,7 +425,7 @@ final class DNSIncoming
      *
      * @throws IllegalArgumentException If not a query or if Truncated.
      */
-    void append(DNSIncoming that)
+    public void append(DNSIncoming that)
     {
         if (this.isQuery() && this.isTruncated() && that.isQuery())
         {
@@ -459,7 +459,7 @@ final class DNSIncoming
         }
     }
 
-    int elapseSinceArrival()
+    public int elapseSinceArrival()
     {
         return (int) (System.currentTimeMillis() - receivedTime);
     }

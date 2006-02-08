@@ -54,6 +54,20 @@ public final class DNSOutgoing
     }
 
     /**
+     * Get the data of this outgoing DNS message.
+     */
+    public byte[] getData() {
+    	return data;
+    }
+    
+    /**
+     * Get the offset of this outgoing DNS message.
+     */
+    public int getOff() {
+    	return off;
+    }
+    
+    /**
      * Add a question to the message.
      */
     public void addQuestion(DNSQuestion rec) throws IOException

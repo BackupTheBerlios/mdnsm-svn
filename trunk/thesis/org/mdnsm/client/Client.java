@@ -1,6 +1,7 @@
 package org.mdnsm.client;
 
 import org.mdnsm.mdns.*;
+import org.mdnsm.mdns.JmDNS.Prober;
 import org.mdnsm.server.*;
 
 import java.io.*;
@@ -20,6 +21,11 @@ public class Client {
 	private final int SERVER_RR_TTL = 360000;
 	private final int SERVER_ANN_INTERVAL = 300000;
 	private final int SERVER_CLEAN_INTERVAL = 300000;
+	
+	// Port on which the server daemons communicate
+	private final int DAEMON_PORT = 1337;
+	// Port on which servers and clients communicate
+	private final int SERVER_CLIENT_COMM = 1338;
 	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss = new Hashtable();
@@ -44,6 +50,9 @@ public class Client {
 	// Listeners for information
 	private Hashtable infoListeners;
 	
+	// The socket for client server communication
+	private DatagramSocket socket;
+	
 	private String os;
 	
 	public Client() throws IOException {
@@ -62,6 +71,12 @@ public class Client {
 		reachableServers = new Vector();
 		serverListener = new ServerListener();
 		infoListeners = new Hashtable();
+		try {
+			socket = new DatagramSocket(SERVER_CLIENT_COMM);
+		}
+		catch(SocketException exc) {
+			exc.printStackTrace();
+		}
 	}
 	
 	public DNSCache getServerCache() {
@@ -335,8 +350,6 @@ public class Client {
 		private DatagramSocket receiveSocket;
 		private boolean RUNNING;
 		
-		private final int DAEMON_PORT = 1337; // TODO: veranderen
-		
 		/**
 		 * Initialize a new server daemon.
 		 */
@@ -538,7 +551,7 @@ public class Client {
 	}
 	
 	/*
-	 * Contacting usable servers
+	 * Communication with servers
 	 */
 	
 	/**
@@ -564,9 +577,66 @@ public class Client {
 			// TODO: lokale servers direct aanspreken
 		}
 		else {
-			// TODO: nieuwe ServiceInfoResolver thread opstarten
+			(new Thread(new ServiceResolver(type))).start();
 		}
 	}
+	
+	/**
+     * The ServiceResolver queries three times consecutively for services of
+     * a given type, and then removes itself from the timer.
+     * Based on JmDNS code.
+     * 
+     * @author	Arthur van Hoff, Rick Blair, Jeff Sonstein, Werner Randelshofer,
+     * 			Pierre Frisch, Scott Lewis
+     * @author	Frederic Cremer
+     */
+    private class ServiceResolver extends TimerTask {
+    	
+        int count = 0;
+        private String type;
+
+        public ServiceResolver(String type) {
+            this.type = type;
+        }
+
+        public void start() {
+            timer.schedule(this, DNSConstants.QUERY_WAIT_INTERVAL, DNSConstants.QUERY_WAIT_INTERVAL);
+        }
+
+        public void run() {
+            try {
+                    if (count++ < 3) {
+                        long now = System.currentTimeMillis();
+                        DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
+                        out.addQuestion(new DNSQuestion(type, DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN));
+                        // This should only be executed when there is only one JmDNS instance running locally
+                        // so we should be able to safely add the registered services of that instance as known
+                        // answers
+                        Map services = (Map)((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).getServices();
+                        for (Iterator s = services.values().iterator(); s.hasNext();)
+                        {
+                            final ServiceInfo info = (ServiceInfo) s.next();
+                            try
+                            {
+                                out.addAnswer(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()), now);
+                            }
+                            catch (IOException ee)
+                            {
+                                break;
+                            }
+                        }
+                        send(out);
+                    }
+                    else {
+                        // After three queries, we can quit.
+                        cancel();
+                    }
+            }
+            catch (IOException exc) {
+            	exc.printStackTrace();
+            }
+        }
+    }
 	
 	/**
      * The ServiceInfoResolver queries up to three times consecutively for
@@ -580,7 +650,7 @@ public class Client {
      * @author	Frederic Cremer
      */
     private class ServiceInfoResolver extends TimerTask {
-        // Number of queries already sent
+        
         int count = 0;
         private ServiceInfo info;
 
@@ -607,9 +677,149 @@ public class Client {
             	}
             }
             catch(IOException exc) {
-            	
+            	exc.printStackTrace();
             }
         }
+    }
+    
+    /**
+     * Send an outgoing unicast DNS message to all reachable servers.
+     */
+    private void send(DNSOutgoing out) throws IOException {
+        out.finish();
+        if (!out.isEmpty()) {
+        	for(Iterator i = reachableServers.iterator(); i.hasNext();) {
+        		String ip = (String)i.next();
+        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), SERVER_CLIENT_COMM);
+        		try {
+        			DNSIncoming msg = new DNSIncoming(packet);
+        		}
+        		catch (IOException exc) {
+        			exc.printStackTrace();
+        		}
+        		socket.send(packet);
+        	}
+        }
+    }
+    
+    /**
+     * Listen for unicast packets.
+     * Code based on JmDNS code.
+     * 
+     * @author	Arthur van Hoff, Rick Blair, Jeff Sonstein, Werner Randelshofer,
+     * 			Pierre Frisch, Scott Lewis
+     * @author	Frederic Cremer
+     */
+    class SocketListener implements Runnable {
+        
+    	private boolean needed = true;
+    	
+    	public void run() {
+            try {
+                byte buf[] = new byte[DNSConstants.MAX_MSG_ABSOLUTE];
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                while (needed) {
+                    packet.setLength(buf.length);
+                    socket.receive(packet);
+                    try {
+                    	DNSIncoming msg = new DNSIncoming(packet);
+                    	// We don't really expect queries here
+                    	if(msg.isResponse()) {
+                    		handleResponse(msg);
+                    	}
+                    }
+                    catch (Exception exc) {
+                        exc.printStackTrace();
+                    }
+                }
+            }
+            catch (IOException exc) {
+            	exc.printStackTrace();
+            }
+        }
+    	
+    }
+    	
+    /**
+     * Handle an incoming response.
+     * For pointers to specific types, start requesting service information.
+     * For specific service information, pass it on to the associated listeners.
+     * Based on JmDNS code.
+     */
+    private void handleResponse(DNSIncoming msg) throws IOException
+    {
+    	long now = System.currentTimeMillis();
+    	
+    	boolean hostConflictDetected = false;
+    	boolean serviceConflictDetected = false;
+    	
+    	for (Iterator i = msg.answers.iterator(); i.hasNext();)
+    	{
+    		boolean isInformative = false;
+    		DNSRecord rec = (DNSRecord) i.next();
+    		boolean expired = rec.isExpired(now);
+    		
+    		// update the cache
+    		DNSRecord c = (DNSRecord) cache.get(rec);
+    		if (c != null)
+    		{
+    			if (expired)
+    			{
+    				isInformative = true;
+    				cache.remove(c);
+    			}
+    			else
+    			{
+    				c.resetTTL(rec);
+    				rec = c;
+    			}
+    		}
+    		else
+    		{
+    			if (!expired)
+    			{
+    				
+    				isInformative = true;
+    				cache.add(rec);
+    			}
+    		}
+    		switch (rec.type)
+    		{
+    		case DNSConstants.TYPE_PTR:
+    			// handle _mdns._udp records
+    			if (rec.getName().indexOf("._mdns._udp.") >= 0)
+    			{
+    				if (!expired && rec.name.startsWith("_services._mdns._udp."))
+    				{
+    					isInformative = true;
+    					registerServiceType(((DNSRecord.Pointer) rec).alias);
+    				}
+    				continue;
+    			}
+    			registerServiceType(rec.name);
+    			break;
+    		}
+    		
+    		if ((rec.getType() == DNSConstants.TYPE_A) || (rec.getType() == DNSConstants.TYPE_AAAA))
+    		{
+    			hostConflictDetected |= rec.handleResponse(this);
+    		}
+    		else
+    		{
+    			serviceConflictDetected |= rec.handleResponse(this);
+    		}
+    		
+    		// notify the listeners
+    		if (isInformative)
+    		{
+    			recordUpdated(now, rec);
+    		}
+    	}
+    	
+    	if (hostConflictDetected || serviceConflictDetected)
+    	{
+    		new Prober().start();
+    	}
     }
 		
 }
