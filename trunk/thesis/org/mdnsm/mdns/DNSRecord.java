@@ -37,6 +37,10 @@ public abstract class DNSRecord extends DNSEntry
         this.created = System.currentTimeMillis();
     }
 
+    public int getType() {
+    	return type;
+    }
+    
     /**
      * True if this record is the same as some other record.
      */
@@ -144,7 +148,7 @@ public abstract class DNSRecord extends DNSEntry
     /**
      * Check if the record is expired.
      */
-    boolean isExpired(long now)
+    public boolean isExpired(long now)
     {
         return getExpirationTime(100) <= now;
     }

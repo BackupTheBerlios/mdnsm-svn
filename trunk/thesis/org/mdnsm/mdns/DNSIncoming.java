@@ -158,6 +158,13 @@ public final class DNSIncoming
     }
 
     /**
+     * Get the answers in this DNS message.
+     */
+    public List getAnswers() {
+    	return answers;
+    }
+    
+    /**
      * Check if the message is a query.
      */
     public boolean isQuery()

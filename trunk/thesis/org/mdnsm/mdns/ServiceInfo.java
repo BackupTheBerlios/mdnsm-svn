@@ -192,7 +192,6 @@ public class ServiceInfo implements DNSListener {
 	/**
 	 * Construct a service record during service discovery.
 	 */
-	// TODO: mag dit?
 	public ServiceInfo(String type, String name) {
 		if (!type.endsWith(".")) {
 			throw new IllegalArgumentException(

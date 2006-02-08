@@ -2600,7 +2600,7 @@ public class JmDNS
     /**
      * Get the unqualified name out of the given qualified name (= name + type).
      */
-    private static String toUnqualifiedName(String type, String qualifiedName)
+    public static String toUnqualifiedName(String type, String qualifiedName)
     {
         if (qualifiedName.endsWith(type))
         {

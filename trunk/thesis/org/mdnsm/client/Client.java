@@ -1,7 +1,6 @@
 package org.mdnsm.client;
 
 import org.mdnsm.mdns.*;
-import org.mdnsm.mdns.JmDNS.Prober;
 import org.mdnsm.server.*;
 
 import java.io.*;
@@ -728,7 +727,7 @@ public class Client {
                     		handleResponse(msg);
                     	}
                     }
-                    catch (Exception exc) {
+                    catch (IOException exc) {
                         exc.printStackTrace();
                     }
                 }
@@ -746,79 +745,23 @@ public class Client {
      * For specific service information, pass it on to the associated listeners.
      * Based on JmDNS code.
      */
-    private void handleResponse(DNSIncoming msg) throws IOException
-    {
+    private void handleResponse(DNSIncoming msg) throws IOException {
     	long now = System.currentTimeMillis();
-    	
-    	boolean hostConflictDetected = false;
-    	boolean serviceConflictDetected = false;
-    	
-    	for (Iterator i = msg.answers.iterator(); i.hasNext();)
-    	{
-    		boolean isInformative = false;
+    	for (Iterator i = msg.getAnswers().iterator(); i.hasNext();){
     		DNSRecord rec = (DNSRecord) i.next();
     		boolean expired = rec.isExpired(now);
-    		
-    		// update the cache
-    		DNSRecord c = (DNSRecord) cache.get(rec);
-    		if (c != null)
-    		{
-    			if (expired)
-    			{
-    				isInformative = true;
-    				cache.remove(c);
-    			}
-    			else
-    			{
-    				c.resetTTL(rec);
-    				rec = c;
-    			}
+    		switch (rec.getType()) {
+    			case DNSConstants.TYPE_PTR:
+    				ServiceInfo info = new ServiceInfo(rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()));
+    				(new ServiceInfoResolver(info)).start();
+    				break;
+    			case DNSConstants.TYPE_SRV:
+    				// TODO: melden aan listener
+    				break;
+    			case DNSConstants.TYPE_TXT:
+    				// TODO: melden aan listener
+    				break;
     		}
-    		else
-    		{
-    			if (!expired)
-    			{
-    				
-    				isInformative = true;
-    				cache.add(rec);
-    			}
-    		}
-    		switch (rec.type)
-    		{
-    		case DNSConstants.TYPE_PTR:
-    			// handle _mdns._udp records
-    			if (rec.getName().indexOf("._mdns._udp.") >= 0)
-    			{
-    				if (!expired && rec.name.startsWith("_services._mdns._udp."))
-    				{
-    					isInformative = true;
-    					registerServiceType(((DNSRecord.Pointer) rec).alias);
-    				}
-    				continue;
-    			}
-    			registerServiceType(rec.name);
-    			break;
-    		}
-    		
-    		if ((rec.getType() == DNSConstants.TYPE_A) || (rec.getType() == DNSConstants.TYPE_AAAA))
-    		{
-    			hostConflictDetected |= rec.handleResponse(this);
-    		}
-    		else
-    		{
-    			serviceConflictDetected |= rec.handleResponse(this);
-    		}
-    		
-    		// notify the listeners
-    		if (isInformative)
-    		{
-    			recordUpdated(now, rec);
-    		}
-    	}
-    	
-    	if (hostConflictDetected || serviceConflictDetected)
-    	{
-    		new Prober().start();
     	}
     }
 		
