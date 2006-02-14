@@ -453,7 +453,7 @@ public abstract class DNSRecord extends DNSEntry
     public static class Text extends DNSRecord
     {
         private static Logger logger = Logger.getLogger(Text.class.toString());
-        byte text[];
+        public byte text[];
 
         public Text(String name, int type, int clazz, int ttl, byte text[])
         {
@@ -522,10 +522,10 @@ public abstract class DNSRecord extends DNSEntry
     public static class Service extends DNSRecord
     {
         private static Logger logger = Logger.getLogger(Service.class.toString());
-        int priority;
-        int weight;
-        int port;
-        String server;
+        public int priority;
+        public int weight;
+        public int port;
+        public String server;
 
         public Service(String name, int type, int clazz, int ttl, int priority, int weight, int port, String server)
         {

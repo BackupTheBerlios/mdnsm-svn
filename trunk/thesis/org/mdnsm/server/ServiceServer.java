@@ -33,7 +33,12 @@ public class ServiceServer {
 	private Timer timer;
 	
 	private ClientListener clientListener;
+	private ServerListener serverListener;
 	private DatagramSocket clientSocket;
+	private DatagramSocket serverSocket;
+	
+	private Hashtable typeRequesters;
+	private Hashtable serviceRequesters;
 	
 	/**
 	 * Initialize a new server as a part of the given client.
@@ -75,6 +80,8 @@ public class ServiceServer {
 		
 		// Start listening to queries from the local subnet
 		(new Thread(clientListener)).start();
+		// Start listening to queries and answers from other servers
+		(new Thread(serverListener)).start();
 		
 		// TODO: start listening for queries from other servers
 	}
@@ -88,15 +95,16 @@ public class ServiceServer {
 		this.hostAddress = hostAddress;
 		timer = new Timer();
 		try {
-			clientSocket = new DatagramSocket(Utils.CLIENT_SERVER_COMM, InetAddress.getByName(getHostAddress()));
+			clientSocket = new DatagramSocket(Utils.CLIENT_SERVER_COMM);
+			serverSocket = new DatagramSocket(Utils.SERVER_SERVER_COMM);
 		}
 		catch(SocketException exc) {
 			exc.printStackTrace();
 		}
-		catch(UnknownHostException exc) {
-			exc.printStackTrace();
-		}
 		clientListener = new ClientListener();
+		serverListener = new ServerListener();
+		typeRequesters = new Hashtable();
+		serviceRequesters = new Hashtable();
 	}
 	
 	/**
@@ -245,14 +253,72 @@ public class ServiceServer {
             	byte buf[] = new byte[DNSConstants.MAX_MSG_ABSOLUTE];
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
                 while (needed) {
-                    packet.setLength(buf.length);
                     clientSocket.receive(packet);
                     try {
                     	DNSIncoming msg = new DNSIncoming(packet);
+                    	DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
                     	// We don't really expect answers here
                     	if(msg.isQuery()) {
-                    		// TODO: 
+                    		for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
+                    			DNSRecord q = (DNSRecord)i.next();
+                    			// Type query
+                    			if(q.getType() == DNSConstants.TYPE_PTR) {
+                    				String type = q.getName();
+                    				String sender = packet.getAddress().getHostAddress();
+                    				// Get local answers that are not yet known to the sender
+                    				Vector filteredAnswers = filterServices(searchServicesByType(type), msg.getAnswers());
+                    				// Send unknown local answers to sender
+                    				if(filteredAnswers.size() > 0) {
+                    					// TODO: stuur antwoorden naar aanvrager
+                    				}
+                    				// Add the sender to the list of senders requesting info about the given type
+                    				if(typeRequesters.containsKey(type)) {
+                    					((Vector)typeRequesters.get(type)).add(sender);
+                    				}
+                    				// Modify the routed request
+                    				out.addQuestion(new DNSQuestion(type, DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN));
+                    				for(Iterator j = filteredAnswers.iterator(); j.hasNext();) {
+                    					DNSEntry entry = (DNSEntry)j.next();
+                    					out.addAnswer(new DNSRecord.Pointer(entry.getName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, ((DNSRecord.Pointer)entry).getAlias()), System.currentTimeMillis());
+                    				}
+                    				//			c) voeg nieuwe vraag toe aan uitgaande query
+                    			}
+                    			// Service query
+                    			if(q.getType() == DNSConstants.TYPE_SRV || q.getType() == DNSConstants.TYPE_TXT) {
+                    				String service = q.getName();
+                    				String sender = packet.getAddress().getHostAddress();
+                    				// Get local answers that are not yet known to the sender
+                    				// (filtering should not be necessary, as clients can only request service information
+                    				// of non-local services)
+                    				Vector answers = searchServicesByName(service);
+                    				// Send unknown local answers to sender
+                    					// TODO: stuur antwoorden naar aanvrager
+                    				// Add the sender to the list of senders requesting info about the given type
+                    				if(serviceRequesters.containsKey(service)) {
+                    					((Vector)serviceRequesters.get(service)).add(sender);
+                    				}
+                    				// Modify the routed request
+                    				if(q.getType() == DNSConstants.TYPE_SRV) {
+                    					out.addQuestion(new DNSQuestion(service, DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
+                    				}
+                    				else {
+                    					out.addQuestion(new DNSQuestion(service, DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
+                    				}
+                    				for(Iterator j = answers.iterator(); j.hasNext();) {
+                    					DNSEntry entry = (DNSEntry)j.next();
+                    					if(entry.getType() == DNSConstants.TYPE_SRV) {
+                    						DNSRecord.Service s = (DNSRecord.Service)entry;
+                    						out.addAnswer(new DNSRecord.Service(s.getName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, s.priority, s.weight, s.port, s.server), System.currentTimeMillis());
+                    					}
+                    					else {
+                    						DNSRecord.Text t = (DNSRecord.Text)entry;
+                    						out.addAnswer(new DNSRecord.Text(t.getName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, t.text), System.currentTimeMillis());
+                    					}
+                    				}
+                    			}
+                    		}
                     	}
+                    	sendToServers(out);
                     }
                     catch (IOException exc) {
                         exc.printStackTrace();
@@ -271,12 +337,126 @@ public class ServiceServer {
 	}
 	
 	/**
+	 * Search services locally, matching the given type.
+	 */
+	private Vector searchServicesByType(String type) {
+		Vector result = new Vector();
+		for(Iterator i = client.getServerCache().iterator(); i.hasNext();) {
+			for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n.next()) {
+				 DNSEntry entry = n.getValue();
+				 if(entry.getType() == DNSConstants.TYPE_PTR && JmDNS.convertToType(entry.getName()).equals(type)) {
+					 result.add(entry);
+				 }
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Search services locally, matching the given fully qualified service name.
+	 */
+	private Vector searchServicesByName(String name) {
+		Vector result = new Vector();
+		for(Iterator i = client.getServerCache().iterator(); i.hasNext();) {
+			for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n.next()) {
+				 DNSEntry entry = n.getValue();
+				 if((entry.getType() == DNSConstants.TYPE_PTR) || (entry.getType() == DNSConstants.TYPE_TXT) && entry.getName().equals(name)) {
+					 result.add(entry);
+				 }
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Filter all known answers out of the local answers and return a list
+	 * of answers that are not yet known.
+	 */
+	private Vector filterServices(Vector localAnswers, List answers) {
+		Vector result = new Vector();
+		for(Iterator i = localAnswers.iterator(); i.hasNext();) {
+			DNSEntry a = (DNSEntry)i.next();
+			boolean contains = false;
+			for(Iterator j = answers.iterator(); j.hasNext();) {
+				DNSEntry b = (DNSEntry)j.next();
+				if(a.getType() == b.getType() && a.getName().equals(b.getName())) {
+					contains = true;
+				}
+			}
+			if(!contains) {
+				result.add(a);
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Send the given DNS outgoing message to all other available service servers.
+	 */
+	private void sendToServers(DNSOutgoing out) {
+		try {
+			out.finish();
+			for(Iterator i = client.getSSCache().iterator(); i.hasNext();) {
+				SSCache.SSElement e = (SSCache.SSElement)i.next();
+				DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(e.getRR().getDomain()), Utils.SERVER_SERVER_COMM);
+				serverSocket.send(packet);
+			}
+		}
+		catch(IOException exc) {
+			exc.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Inner class listening to queries and answers from other servers.
+	 * Loosely based on JmDNS-code.
+	 * 
+	 * @author	Frederic Cremer
+	 */
+	private class ServerListener implements Runnable {
+		
+		private boolean needed = true;
+		
+		public void run() {
+			try {
+            	byte buf[] = new byte[DNSConstants.MAX_MSG_ABSOLUTE];
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                while (needed) {
+                	serverSocket.receive(packet);
+                	try {
+                		DNSIncoming msg = new DNSIncoming(packet);
+                		// Incoming query
+                		if(msg.isQuery()) {
+                			// TODO: antwoorden opzoeken en naar aanvrager sturen
+                		}
+                		else if(msg.isResponse()) {
+                			// TODO: naar vragende clients sturen
+                		}
+                	}
+                	catch(IOException exc) {
+                		exc.printStackTrace();
+                	}
+                }
+			}
+			catch(Exception exc) {
+				
+			}
+		}
+		
+		public void stop() {
+			needed = false;
+		}
+		
+	}
+	
+	/**
 	 * Shutdown this DNS server by multicasting a message to all local clients,
 	 * shutting down the UDP daemon and removing any service listeners from the
 	 * mDNS daemon.
 	 */
 	public void shutdown() {
 		clientListener.stop();
+		serverListener.stop();
 		
 		jmdns.unregisterService(serviceInfo);
 		

@@ -13,6 +13,8 @@ public class Utils
 	public static final int SERVER_CLIENT_COMM = 1338;
 	// Port on which clients contact servers
 	public static final int CLIENT_SERVER_COMM = 1339;
+	// Port for interserver communication
+	public static final int SERVER_SERVER_COMM = 1340;
 	
     /** The request/respose numbers */
     public static final int A		= 1;

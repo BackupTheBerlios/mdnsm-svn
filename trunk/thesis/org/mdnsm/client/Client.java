@@ -83,6 +83,10 @@ public class Client {
 		return serverCache;
 	}
 	
+	public SSCache getSSCache() {
+		return ssCache;
+	}
+	
 	/**
 	 * Check whether this client has server instances running.
 	 */

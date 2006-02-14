@@ -20,6 +20,13 @@ public class SSCache {
 	}
 	
 	/**
+	 * Get an iterator over all elements in this cache.
+	 */
+	public Iterator iterator() {
+		return elements.iterator();
+	}
+	
+	/**
 	 * Add a new resource record to the cache, or update an existing
 	 * resource record if a match occurs.
 	 */
@@ -61,7 +68,7 @@ public class SSCache {
 	 * Such an element consists of a resource record pointing to a service server,
 	 * along with an expiration time for the record.
 	 */
-	private class SSElement {
+	public class SSElement {
 		
 		private ResourceRecord rr;
 		private long expTime;

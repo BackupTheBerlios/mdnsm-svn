@@ -747,7 +747,7 @@ public class JmDNS
      * 
      * @return	The converted string.
      */
-    private String convertToType(String type) {
+    public static String convertToType(String type) {
     	if(type == null) {
     		throw new IllegalArgumentException("JmDNS.convertToType: invalid input specified.");
     	}

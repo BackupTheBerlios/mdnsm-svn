@@ -165,6 +165,13 @@ public final class DNSIncoming
     }
     
     /**
+     * Get the questions in this DNS message.
+     */
+    public List getQuestions() {
+    	return questions;
+    }
+    
+    /**
      * Check if the message is a query.
      */
     public boolean isQuery()
