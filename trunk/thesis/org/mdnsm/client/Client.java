@@ -676,7 +676,8 @@ public class Client {
             		DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
             		out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
             		out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
-            		send(out);
+            		// TODO: rechtstreeks client contacteren
+            		// send(out);
             	}
             	else {
             		// After three queries, we can quit.
@@ -730,9 +731,11 @@ public class Client {
                     socket.receive(packet);
                     try {
                     	DNSIncoming msg = new DNSIncoming(packet);
-                    	// We don't really expect queries here
                     	if(msg.isResponse()) {
                     		handleResponse(msg);
+                    	}
+                    	if(msg.isQuery()) {
+                    		// TODO: zoek antwoord en stuur naar vragende client
                     	}
                     }
                     catch (IOException exc) {

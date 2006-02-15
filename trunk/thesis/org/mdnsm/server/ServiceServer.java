@@ -38,7 +38,6 @@ public class ServiceServer {
 	private DatagramSocket serverSocket;
 	
 	private Hashtable typeRequesters;
-	private Hashtable serviceRequesters;
 	
 	/**
 	 * Initialize a new server as a part of the given client.
@@ -104,7 +103,6 @@ public class ServiceServer {
 		clientListener = new ClientListener();
 		serverListener = new ServerListener();
 		typeRequesters = new Hashtable();
-		serviceRequesters = new Hashtable();
 	}
 	
 	/**
@@ -261,6 +259,7 @@ public class ServiceServer {
                     	if(msg.isQuery()) {
                     		for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
                     			DNSRecord q = (DNSRecord)i.next();
+                    			
                     			// Type query
                     			if(q.getType() == DNSConstants.TYPE_PTR) {
                     				String type = q.getName();
@@ -275,49 +274,21 @@ public class ServiceServer {
                     				if(typeRequesters.containsKey(type)) {
                     					((Vector)typeRequesters.get(type)).add(sender);
                     				}
+                    				else {
+                    					Vector vector = new Vector();
+                    					vector.add(sender);
+                    					typeRequesters.put(type, vector);
+                    				}
                     				// Modify the routed request
                     				out.addQuestion(new DNSQuestion(type, DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN));
                     				for(Iterator j = filteredAnswers.iterator(); j.hasNext();) {
                     					DNSEntry entry = (DNSEntry)j.next();
                     					out.addAnswer(new DNSRecord.Pointer(entry.getName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, ((DNSRecord.Pointer)entry).getAlias()), System.currentTimeMillis());
                     				}
-                    				//			c) voeg nieuwe vraag toe aan uitgaande query
-                    			}
-                    			// Service query
-                    			if(q.getType() == DNSConstants.TYPE_SRV || q.getType() == DNSConstants.TYPE_TXT) {
-                    				String service = q.getName();
-                    				String sender = packet.getAddress().getHostAddress();
-                    				// Get local answers that are not yet known to the sender
-                    				// (filtering should not be necessary, as clients can only request service information
-                    				// of non-local services)
-                    				Vector answers = searchServicesByName(service);
-                    				// Send unknown local answers to sender
-                    					// TODO: stuur antwoorden naar aanvrager
-                    				// Add the sender to the list of senders requesting info about the given type
-                    				if(serviceRequesters.containsKey(service)) {
-                    					((Vector)serviceRequesters.get(service)).add(sender);
-                    				}
-                    				// Modify the routed request
-                    				if(q.getType() == DNSConstants.TYPE_SRV) {
-                    					out.addQuestion(new DNSQuestion(service, DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
-                    				}
-                    				else {
-                    					out.addQuestion(new DNSQuestion(service, DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
-                    				}
-                    				for(Iterator j = answers.iterator(); j.hasNext();) {
-                    					DNSEntry entry = (DNSEntry)j.next();
-                    					if(entry.getType() == DNSConstants.TYPE_SRV) {
-                    						DNSRecord.Service s = (DNSRecord.Service)entry;
-                    						out.addAnswer(new DNSRecord.Service(s.getName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, s.priority, s.weight, s.port, s.server), System.currentTimeMillis());
-                    					}
-                    					else {
-                    						DNSRecord.Text t = (DNSRecord.Text)entry;
-                    						out.addAnswer(new DNSRecord.Text(t.getName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, t.text), System.currentTimeMillis());
-                    					}
-                    				}
                     			}
                     		}
                     	}
+                    	
                     	sendToServers(out);
                     }
                     catch (IOException exc) {
@@ -353,22 +324,6 @@ public class ServiceServer {
 	}
 	
 	/**
-	 * Search services locally, matching the given fully qualified service name.
-	 */
-	private Vector searchServicesByName(String name) {
-		Vector result = new Vector();
-		for(Iterator i = client.getServerCache().iterator(); i.hasNext();) {
-			for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n.next()) {
-				 DNSEntry entry = n.getValue();
-				 if((entry.getType() == DNSConstants.TYPE_PTR) || (entry.getType() == DNSConstants.TYPE_TXT) && entry.getName().equals(name)) {
-					 result.add(entry);
-				 }
-			}
-		}
-		return result;
-	}
-	
-	/**
 	 * Filter all known answers out of the local answers and return a list
 	 * of answers that are not yet known.
 	 */
@@ -396,10 +351,12 @@ public class ServiceServer {
 	private void sendToServers(DNSOutgoing out) {
 		try {
 			out.finish();
-			for(Iterator i = client.getSSCache().iterator(); i.hasNext();) {
-				SSCache.SSElement e = (SSCache.SSElement)i.next();
-				DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(e.getRR().getDomain()), Utils.SERVER_SERVER_COMM);
-				serverSocket.send(packet);
+			if(!out.isEmpty()) {
+				for(Iterator i = client.getSSCache().iterator(); i.hasNext();) {
+					SSCache.SSElement e = (SSCache.SSElement)i.next();
+					DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(e.getRR().getDomain()), Utils.SERVER_SERVER_COMM);
+					serverSocket.send(packet);
+				}
 			}
 		}
 		catch(IOException exc) {
@@ -425,12 +382,46 @@ public class ServiceServer {
                 	serverSocket.receive(packet);
                 	try {
                 		DNSIncoming msg = new DNSIncoming(packet);
+                		
                 		// Incoming query
                 		if(msg.isQuery()) {
-                			// TODO: antwoorden opzoeken en naar aanvrager sturen
+                			DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
+                			String sender = packet.getAddress().getHostAddress();
+                			for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
+                    			DNSRecord q = (DNSRecord)i.next();
+                    			
+                    			// Type query
+                    			if(q.getType() == DNSConstants.TYPE_PTR) {
+                    				String type = q.getName();
+                    				// Get local answers that are not yet known to the sender
+                    				Vector filteredAnswers = filterServices(searchServicesByType(type), msg.getAnswers());
+                    				// Construct the answer
+                    				for(Iterator j = filteredAnswers.iterator(); j.hasNext();) {
+                    					DNSEntry entry = (DNSEntry)j.next();
+                    					out.addAnswer(new DNSRecord.Pointer(entry.getName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, ((DNSRecord.Pointer)entry).getAlias()), System.currentTimeMillis());
+                    				}
+                    			}
+                    			
+                    			send(out, sender, true);
+                    		}
                 		}
+                		
                 		else if(msg.isResponse()) {
-                			// TODO: naar vragende clients sturen
+                			DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
+                			String type = "";
+                			for(Iterator i = msg.getAnswers().iterator(); i.hasNext();) {
+                    			DNSRecord q = (DNSRecord)i.next();
+                    			if(q.getType() == DNSConstants.TYPE_PTR) {
+                    				if(type.equals("")) {
+                    					type = JmDNS.convertToType(q.getName());
+                    				}
+                    				out.addAnswer((DNSRecord.Pointer)q, System.currentTimeMillis());
+                    			}
+                			}
+                			for(Iterator i = ((Vector)typeRequesters.get(type)).iterator(); i.hasNext();) {
+                				String ip = (String)i.next();
+                				send(out, ip, false);
+                			}
                 		}
                 	}
                 	catch(IOException exc) {
@@ -447,6 +438,28 @@ public class ServiceServer {
 			needed = false;
 		}
 		
+	}
+	
+	/**
+	 * Send the outgoing DNS message to the specified IP (server or client).
+	 */
+	private void send(DNSOutgoing out, String ip, boolean server) {
+		try {
+			out.finish();
+			if(!out.isEmpty()) {
+				if(server) {
+					DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_SERVER_COMM);
+					serverSocket.send(packet);
+				}
+				else {
+					DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_CLIENT_COMM);
+					clientSocket.send(packet);
+				}
+			}
+		}
+		catch(IOException exc) {
+			exc.printStackTrace();
+		}
 	}
 	
 	/**
