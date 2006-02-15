@@ -599,7 +599,6 @@ public class Client {
      */
     private class ServiceResolver extends TimerTask {
     	
-        int count = 0;
         private String type;
 
         public ServiceResolver(String type) {
@@ -612,32 +611,26 @@ public class Client {
 
         public void run() {
             try {
-                    if (count++ < 3) {
-                        long now = System.currentTimeMillis();
-                        DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
-                        out.addQuestion(new DNSQuestion(type, DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN));
-                        // This should only be executed when there is only one JmDNS instance running locally
-                        // so we should be able to safely add the registered services of that instance as known
-                        // answers
-                        Map services = (Map)((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).getServices();
-                        for (Iterator s = services.values().iterator(); s.hasNext();)
-                        {
-                            final ServiceInfo info = (ServiceInfo) s.next();
-                            try
-                            {
-                                out.addAnswer(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()), now);
-                            }
-                            catch (IOException ee)
-                            {
-                                break;
-                            }
-                        }
-                        send(out);
-                    }
-                    else {
-                        // After three queries, we can quit.
-                        cancel();
-                    }
+            	long now = System.currentTimeMillis();
+            	DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
+            	out.addQuestion(new DNSQuestion(type, DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN));
+            	// This should only be executed when there is only one JmDNS instance running locally
+            	// so we should be able to safely add the registered services of that instance as known
+            	// answers
+            	Map services = (Map)((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).getServices();
+            	for (Iterator s = services.values().iterator(); s.hasNext();)
+            	{
+            		final ServiceInfo info = (ServiceInfo) s.next();
+            		try
+            		{
+            			out.addAnswer(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()), now);
+            		}
+            		catch (IOException ee)
+            		{
+            			break;
+            		}
+            	}
+            	send(out);
             }
             catch (IOException exc) {
             	exc.printStackTrace();
@@ -658,7 +651,6 @@ public class Client {
      */
     private class ServiceInfoResolver extends TimerTask {
         
-        int count = 0;
         private ServiceInfo info;
 
         public ServiceInfoResolver(ServiceInfo info) {
@@ -671,18 +663,12 @@ public class Client {
 
         public void run() {
             try {
-            	if (count++ < 3) {
-            		long now = System.currentTimeMillis();
-            		DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
-            		out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
-            		out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
-            		// TODO: rechtstreeks client contacteren
-            		// send(out);
-            	}
-            	else {
-            		// After three queries, we can quit.
-            		cancel();
-            	}
+            	long now = System.currentTimeMillis();
+            	DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
+            	out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
+            	out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
+            	// TODO: rechtstreeks client contacteren
+            	// send(out);
             }
             catch(IOException exc) {
             	exc.printStackTrace();

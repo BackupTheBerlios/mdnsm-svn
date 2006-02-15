@@ -37,7 +37,7 @@ public class ServiceServer {
 	private DatagramSocket clientSocket;
 	private DatagramSocket serverSocket;
 	
-	private Hashtable typeRequesters;
+	private Hashtable typeRequesters; // TODO: time-outs
 	
 	/**
 	 * Initialize a new server as a part of the given client.
@@ -81,8 +81,6 @@ public class ServiceServer {
 		(new Thread(clientListener)).start();
 		// Start listening to queries and answers from other servers
 		(new Thread(serverListener)).start();
-		
-		// TODO: start listening for queries from other servers
 	}
 	
 	/**
@@ -254,6 +252,7 @@ public class ServiceServer {
                     clientSocket.receive(packet);
                     try {
                     	DNSIncoming msg = new DNSIncoming(packet);
+                    	String sender = packet.getAddress().getHostAddress();
                     	DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
                     	// We don't really expect answers here
                     	if(msg.isQuery()) {
@@ -263,12 +262,16 @@ public class ServiceServer {
                     			// Type query
                     			if(q.getType() == DNSConstants.TYPE_PTR) {
                     				String type = q.getName();
-                    				String sender = packet.getAddress().getHostAddress();
                     				// Get local answers that are not yet known to the sender
                     				Vector filteredAnswers = filterServices(searchServicesByType(type), msg.getAnswers());
                     				// Send unknown local answers to sender
                     				if(filteredAnswers.size() > 0) {
-                    					// TODO: stuur antwoorden naar aanvrager
+                    					DNSOutgoing clientOut = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
+                    					for(Iterator j = filteredAnswers.iterator(); j.hasNext();) {
+                        					DNSEntry entry = (DNSEntry)j.next();
+                        					clientOut.addAnswer(new DNSRecord.Pointer(entry.getName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, ((DNSRecord.Pointer)entry).getAlias()), System.currentTimeMillis());
+                        				}
+                    					send(clientOut, sender, false);
                     				}
                     				// Add the sender to the list of senders requesting info about the given type
                     				if(typeRequesters.containsKey(type)) {
