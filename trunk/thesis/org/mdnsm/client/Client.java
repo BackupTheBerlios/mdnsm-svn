@@ -328,7 +328,9 @@ public class Client {
 		public void serviceAdded(ServiceEvent event) {
 			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
 			removeInfo(info);
+			System.out.println("server added: " + info.getQualifiedName());
 			reachableServers.add(info);
+			((JmDNS)jmdnss.values().iterator().next()).requestServiceInfo(event.getType(), event.getName());
 		}
 		
 		/**
@@ -345,6 +347,7 @@ public class Client {
 		public void serviceResolved(ServiceEvent event) {
 			ServiceInfo info = event.getInfo();
 			removeInfo(info);
+			System.out.println("server modified: " + info.getQualifiedName());
 			reachableServers.add(info);
 		}
 		
