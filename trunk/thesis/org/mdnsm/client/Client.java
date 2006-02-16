@@ -21,13 +21,14 @@ public class Client {
 	private final int SERVER_ANN_INTERVAL = 300000;
 	private final int SERVER_CLEAN_INTERVAL = 300000;
 	
-	// Port on which the server daemons communicate
-	private final int DAEMON_PORT = 1337;
+	// Ports on which the server daemons communicate
+	private final int DAEMON_SEND_PORT = 1336;
+	private final int DAEMON_RECEIVE_PORT = 1337;
 	
 	// JmDNS instances associated with this client
-	private Hashtable jmdnss = new Hashtable();
+	private Hashtable jmdnss;
 	// Server instances associated with this client
-	private Hashtable servers = new Hashtable();
+	private Hashtable servers;
 	// Server cache used by server instances to share accumulated data
 	private DNSCache serverCache;
 	
@@ -47,10 +48,10 @@ public class Client {
 	// Listeners for information
 	private Hashtable infoListeners;
 	
-	// The socket for client server communication
-	private DatagramSocket socket;
-	// The socket listener for non-server clients
-	private SocketListener socketListener;
+	// The sockets for client communication
+	private Hashtable sockets;
+	// The socket listeners for client communication
+	private Hashtable socketListeners;
 	
 	private String os;
 	
@@ -63,6 +64,8 @@ public class Client {
 	 * Initialize this client's data structures.
 	 */
 	private void initData() {
+		jmdnss = new Hashtable();
+		servers = new Hashtable();
 		serverCache = new DNSCache(100);
 		timer = new Timer();
 		ssCache = new SSCache();
@@ -70,13 +73,8 @@ public class Client {
 		reachableServers = new Vector();
 		serverListener = new ServerListener();
 		infoListeners = new Hashtable();
-		try {
-			socket = new DatagramSocket(Utils.SERVER_CLIENT_COMM);
-		}
-		catch(SocketException exc) {
-			exc.printStackTrace();
-		}
-		socketListener = new SocketListener();
+		sockets = new Hashtable();
+		socketListeners = new Hashtable();
 	}
 	
 	public DNSCache getServerCache() {
@@ -154,17 +152,19 @@ public class Client {
 			// Reactivate the server listener (one server left implies that before multiple server instances
 			// were running, and thus the server listener was deactivated)
 			((JmDNS)jmdnss.get(key)).addServiceListener("_sserver._udp.*.local.", serverListener);
-			// Reactivate the socket listener
-			(new Thread(socketListener)).start();
 		}
 		// One IP detected, no active JmDNS instances (typically at startup with a single NIC).
 		if(ips.size() == 1 && jmdnss.size() == 0) {
 			try {
-				jmdnss.put((String)ips.get(0), new JmDNS((String)ips.get(0)));
+				String ip = (String)ips.get(0);
+				jmdnss.put(ip, new JmDNS(ip));
 				// Activate server listener
-				((JmDNS)jmdnss.get((String)ips.get(0))).addServiceListener("_sserver._udp.*.local.", serverListener);
-				// Activate the socket listener
-				(new Thread(socketListener)).start();
+				((JmDNS)jmdnss.get(ip)).addServiceListener("_sserver._udp.*.local.", serverListener);
+				DatagramSocket socket = new DatagramSocket(Utils.CLIENT_COM, InetAddress.getByName(ip));
+				sockets.put(ip, socket);
+				SocketListener listener = new SocketListener(socket);
+				socketListeners.put(ip, listener);
+				(new Thread(listener)).start();
 			}
 			catch(IOException exc) {
 				System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
@@ -175,7 +175,6 @@ public class Client {
 			// Coming from 1 IP, thus meaning activated server listener, implies deactivating the server listener and socket listener
 			if(jmdnss.size() == 1) {
 				((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).removeServiceListener("_sserver._udp.*.local.", serverListener);
-				socketListener.stop();
 			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
@@ -187,7 +186,7 @@ public class Client {
 					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
-				// IP is new, start JmDNS instance, server and server daemon for it
+				// IP is new, start JmDNS instance, server, server daemon and socket listener for it
 				else if(!jmdnss.containsKey(ip)) {
 					try {
 						jmdnss.put(ip, new JmDNS(ip));
@@ -199,6 +198,19 @@ public class Client {
 					reachableServers.add(((ServiceServer)servers.get(ip)).getInfo());
 					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
+					try {
+						DatagramSocket socket = new DatagramSocket(Utils.CLIENT_COM, InetAddress.getByName(ip));
+						sockets.put(ip, socket);
+						SocketListener listener = new SocketListener(socket);
+						socketListeners.put(ip, listener);
+						(new Thread(listener)).start();
+					}
+					catch(SocketException exc) {
+						exc.printStackTrace();
+					}
+					catch(UnknownHostException exc) {
+						exc.printStackTrace();
+					}
 				}
 			}
 		}
@@ -210,6 +222,7 @@ public class Client {
 	 * 		- removing the server from the list of reachable servers
 	 * 		- shutting down the server instance
 	 * 		- shutting down the associated server daemon
+	 * 		- removing associated socket and socket listener
 	 * 		- shutting down the JmDNS instance
 	 * 		- clearing the associated data structures
 	 */
@@ -221,9 +234,13 @@ public class Client {
 				reachableServers.remove(((ServiceServer)servers.get(key)).getInfo());
 				((ServiceServer)servers.get(key)).shutdown();
 				((ServerDaemon)serverDaemons.get(key)).stop();
+				((SocketListener)socketListeners.get(key)).stop();
+				((DatagramSocket)sockets.get(key)).close();
 				((JmDNS)jmdnss.get(key)).close();
 				servers.remove(key);
 				serverDaemons.remove(key);
+				socketListeners.remove(key);
+				sockets.remove(key);
 				jmdnss.remove(key);
 			}
 		}
@@ -372,13 +389,14 @@ public class Client {
 		public ServerDaemon(String ip) {
 			this.ip = ip;
 			try {
-				sendSocket = new MulticastSocket(DAEMON_PORT);
-				sendSocket.joinGroup(InetAddress.getByName(DNSConstants.MDNS_GROUP));
-				sendSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByAddress(ip.getBytes())));
-				receiveSocket = new DatagramSocket(DAEMON_PORT, InetAddress.getByAddress(ip.getBytes()));
+				sendSocket = new MulticastSocket(DAEMON_SEND_PORT);
+				sendSocket.joinGroup(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+				sendSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByName(ip)));
+				receiveSocket = new DatagramSocket(DAEMON_RECEIVE_PORT, InetAddress.getByName(ip));
 			}
 			catch(IOException exc) {
 				System.out.println("Client.ServerDaemon.ServerDaemon: I/O exception occured when trying to initialize multicast sockets.");
+				exc.printStackTrace();
 			}
 		}
 		
@@ -406,7 +424,7 @@ public class Client {
 					route(packet);
 				}
 				catch(SocketException exc) {
-					exc.printStackTrace();
+					// Sockets are closed, catch the failing of the receive and send methods
 				}
 				catch(UnknownHostException exc) {
 					exc.printStackTrace();
@@ -424,6 +442,8 @@ public class Client {
 		 */
 		public void stop() {
 			RUNNING = false;
+			receiveSocket.close();
+			sendSocket.close();
 		}
 		
 		/**
@@ -435,7 +455,9 @@ public class Client {
 			
 			public void run() {
 				try {
-					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP())); 
+					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP()));
+					packet.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+					packet.setPort(DNSConstants.MDNS_PORT);
 					sendSocket.send(packet);
 					route(packet);
 				}
@@ -482,7 +504,10 @@ public class Client {
 			if(!subnets.contains(subnet)) {
 				String newSubnets = getVisitedFromPacket(packet) + "," + subnet;
 				try {
-					sendSocket.send(constructPacket(getRRFromPacket(packet).getDomain(), newSubnets));
+					DatagramPacket sendPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
+					sendPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+					sendPacket.setPort(DNSConstants.MDNS_PORT);
+					sendSocket.send(sendPacket);
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();
@@ -630,7 +655,7 @@ public class Client {
             			break;
             		}
             	}
-            	send(out);
+            	sendToServers(out);
             }
             catch (IOException exc) {
             	exc.printStackTrace();
@@ -667,8 +692,7 @@ public class Client {
             	DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
             	out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN));
             	out.addQuestion(new DNSQuestion(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN));
-            	// TODO: rechtstreeks client contacteren
-            	// send(out);
+            	send(out, Utils.getIPFromType(info.getQualifiedName()));
             }
             catch(IOException exc) {
             	exc.printStackTrace();
@@ -677,14 +701,34 @@ public class Client {
     }
     
     /**
+     * Send an outgoing DNS message to the given IP address.
+     */
+    private void send(DNSOutgoing out, String ip) {
+    	try {
+    		out.finish();
+    		if(!out.isEmpty()) {
+    			DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.CLIENT_COM);
+    			DatagramSocket socket = (DatagramSocket)sockets.values().iterator().next();
+    			socket.send(packet);
+    		}
+    	}
+    	catch(IOException exc) {
+    		exc.printStackTrace();
+    	}
+    }
+    
+    /**
      * Send an outgoing unicast DNS message to all reachable servers.
      */
-    private void send(DNSOutgoing out) throws IOException {
+    private void sendToServers(DNSOutgoing out) throws IOException {
         out.finish();
         if (!out.isEmpty()) {
+        	// Any of the available sockets can be used to send a packet.
+        	// The safest thing here is to use the first one (may be the only one available).
+        	DatagramSocket socket = (DatagramSocket)sockets.values().iterator().next();
         	for(Iterator i = reachableServers.iterator(); i.hasNext();) {
         		String ip = (String)i.next();
-        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.CLIENT_SERVER_COMM);
+        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_COM);
         		try {
         			DNSIncoming msg = new DNSIncoming(packet);
         		}
@@ -706,7 +750,12 @@ public class Client {
      */
     class SocketListener implements Runnable {
         
+    	private DatagramSocket socket;
     	private boolean needed = true;
+    	
+    	public SocketListener(DatagramSocket socket) {
+    		this.socket = socket;
+    	}
     	
     	public void run() {
             try {
@@ -721,13 +770,29 @@ public class Client {
                     		handleResponse(msg);
                     	}
                     	if(msg.isQuery()) {
-                    		// TODO: zoek antwoord en stuur naar vragende client
+                    		String sender = packet.getAddress().getHostAddress();
+                    		DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
+                    		for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
+                    			DNSRecord q = (DNSRecord)i.next();
+                    			if(q.getType() == DNSConstants.TYPE_SRV) {
+                    				ServiceInfo info = ((JmDNS)jmdnss.values().iterator().next()).getServiceInfo(q.getName());
+                    				out.addAnswer(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()), System.currentTimeMillis());
+                    			}
+                    			else if(q.getType() == DNSConstants.TYPE_TXT) {
+                    				ServiceInfo info = ((JmDNS)jmdnss.values().iterator().next()).getServiceInfo(q.getName());
+                    				out.addAnswer(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()), System.currentTimeMillis());
+                    			}
+                    		}
+                    		send(out, sender);
                     	}
                     }
                     catch (IOException exc) {
                         exc.printStackTrace();
                     }
                 }
+            }
+            catch(SocketException exc) {
+            	// Associated socket is closed, catch the failing of the receive method
             }
             catch (IOException exc) {
             	exc.printStackTrace();
@@ -739,6 +804,7 @@ public class Client {
     	 */
     	public void stop() {
     		needed = false;
+    		
     	}
     	
     }
@@ -754,16 +820,31 @@ public class Client {
     	for (Iterator i = msg.getAnswers().iterator(); i.hasNext();){
     		DNSRecord rec = (DNSRecord) i.next();
     		boolean expired = rec.isExpired(now);
+    		ServiceInfo info = null;
+    		String type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
     		switch (rec.getType()) {
     			case DNSConstants.TYPE_PTR:
-    				ServiceInfo info = new ServiceInfo(rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()));
+    				info = new ServiceInfo(rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()));
+    				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
+    					ServiceListener l = (ServiceListener)j.next();
+    					l.serviceAdded(new ServiceEvent(null, JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), null));
+    				}
+    				
     				(new ServiceInfoResolver(info)).start();
     				break;
     			case DNSConstants.TYPE_SRV:
-    				// TODO: melden aan listener
+    				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), ((DNSRecord.Service)rec).port, ((DNSRecord.Service)rec).weight, ((DNSRecord.Service)rec).priority, "");
+    				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
+    					ServiceListener l = (ServiceListener)j.next();
+    					l.serviceAdded(new ServiceEvent(null, JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
+    				}
     				break;
     			case DNSConstants.TYPE_TXT:
-    				// TODO: melden aan listener
+    				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), 0, 0, 0, ((DNSRecord.Text)rec).text);
+    				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
+    					ServiceListener l = (ServiceListener)j.next();
+    					l.serviceAdded(new ServiceEvent(null, JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
+    				}
     				break;
     		}
     	}

@@ -54,9 +54,8 @@ public class ServiceServer {
 		// Register this server as a service
 		try {
 			// TODO: deftige benaming voor service servers en deftige beschrijving
-			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", 53, "service server on "+hostAddress+" registering services");
+			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", Utils.SERVER_COM, "service server on "+hostAddress+" registering services");
 			jmdns.registerService(serviceInfo);
-			int ttl = 360000;
 			client.getServerCache().add(new DNSRecord.Pointer(serviceInfo.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getQualifiedName()));
 			client.getServerCache().add(new DNSRecord.Service(serviceInfo.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getPriority(), serviceInfo.getWeight(), serviceInfo.getPort(), jmdns.getLocalHost().getName()));
 			client.getServerCache().add(new DNSRecord.Text(serviceInfo.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getTextBytes()));
@@ -92,10 +91,13 @@ public class ServiceServer {
 		this.hostAddress = hostAddress;
 		timer = new Timer();
 		try {
-			clientSocket = new DatagramSocket(Utils.CLIENT_SERVER_COMM);
-			serverSocket = new DatagramSocket(Utils.SERVER_SERVER_COMM);
+			clientSocket = new DatagramSocket(Utils.SERVER_COM, InetAddress.getByName(hostAddress));
+			serverSocket = new DatagramSocket(Utils.SERVER_SERVER_COMM, InetAddress.getByName(hostAddress));
 		}
 		catch(SocketException exc) {
+			exc.printStackTrace();
+		}
+		catch(UnknownHostException exc) {
 			exc.printStackTrace();
 		}
 		clientListener = new ClientListener();
@@ -299,6 +301,9 @@ public class ServiceServer {
                     }
                 }
             }
+            catch(SocketException exc) {
+            	// Client socket is closed, catch the failing of the receive method
+            }
             catch (IOException exc) {
             	exc.printStackTrace();
             }
@@ -432,8 +437,11 @@ public class ServiceServer {
                 	}
                 }
 			}
-			catch(Exception exc) {
-				
+			catch(SocketException exc) {
+            	// Server socket is closed, catch the failing of the receive method
+			}
+			catch(IOException exc) {
+				exc.printStackTrace();
 			}
 		}
 		
@@ -455,7 +463,7 @@ public class ServiceServer {
 					serverSocket.send(packet);
 				}
 				else {
-					DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_CLIENT_COMM);
+					DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.CLIENT_COM);
 					clientSocket.send(packet);
 				}
 			}
@@ -472,7 +480,9 @@ public class ServiceServer {
 	 */
 	public void shutdown() {
 		clientListener.stop();
+		clientSocket.close();
 		serverListener.stop();
+		serverSocket.close();
 		
 		jmdns.unregisterService(serviceInfo);
 		

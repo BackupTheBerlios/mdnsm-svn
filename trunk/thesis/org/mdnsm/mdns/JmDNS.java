@@ -380,7 +380,11 @@ public class JmDNS
     public Map getServices() {
     	return services;
     }
-
+    
+    public ServiceInfo getServiceInfo(String name) {
+    	return (ServiceInfo)services.get(name);
+    }
+    
     /**
      * Get service information. If the information is not cached, the method
      * will block until updated information is received.
@@ -775,7 +779,7 @@ public class JmDNS
     /**
      * Get the full type (including subdomain) out of the given qualified name.
      */
-    private String toFullType(String qualified) {
+    public static String toFullType(String qualified) {
     	StringTokenizer tok = new StringTokenizer(qualified, ".");
     	tok.nextToken();
     	String result = "";
@@ -1202,6 +1206,7 @@ public class JmDNS
                             {
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
+                                	System.out.println("query op " + ip + " van " + packet.getAddress().getHostAddress());
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
                                 }
                                 handleQuery(msg, group, DNSConstants.MDNS_PORT);

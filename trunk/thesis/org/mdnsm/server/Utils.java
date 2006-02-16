@@ -1,5 +1,7 @@
 package org.mdnsm.server;
 
+import java.util.*;
+
 /**
  * Common methods used throughout
  *
@@ -10,11 +12,13 @@ package org.mdnsm.server;
 public class Utils
 {
 	// Port on which servers contact clients
-	public static final int SERVER_CLIENT_COMM = 1338;
+	public static final int CLIENT_COM = 1338;
 	// Port on which clients contact servers
-	public static final int CLIENT_SERVER_COMM = 1339;
+	public static final int SERVER_COM = 1339;
 	// Port for interserver communication
 	public static final int SERVER_SERVER_COMM = 1340;
+	
+	public static final String SERVER_MULTICAST_GROUP = "224.0.0.1";
 	
     /** The request/respose numbers */
     public static final int A		= 1;
@@ -349,5 +353,18 @@ public class Utils
         System.out.println (count ("65.66.67.68", "6"));
         System.out.println (reverse ("123"));
         System.out.println (reverse ("1234"));
+    }
+    
+    /**
+     * Get the IP out of a fully qualified type.
+     */
+    public static String getIPFromType(String type) {
+    	StringTokenizer tok = new StringTokenizer(type, ".");
+    	Vector tokens = new Vector();
+    	while(tok.hasMoreTokens()) {
+    		tokens.add(tok.nextToken());
+    	}
+    	int index = tokens.indexOf("local");
+    	return (String)tokens.get(index-4) + (String)tokens.get(index-3) + (String)tokens.get(index-2) + (String)tokens.get(index-1);
     }
 }
