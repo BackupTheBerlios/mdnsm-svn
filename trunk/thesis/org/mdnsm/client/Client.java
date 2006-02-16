@@ -21,9 +21,6 @@ public class Client {
 	private final int SERVER_ANN_INTERVAL = 300000;
 	private final int SERVER_CLEAN_INTERVAL = 300000;
 	
-	// Ports on which the server daemons communicate
-	private final int DAEMON_PORT = 1337;
-	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss;
 	// Server instances associated with this client
@@ -390,7 +387,7 @@ public class Client {
 		public ServerDaemon(String ip) {
 			this.ip = ip;
 			try {
-				sdSocket = new MulticastSocket(DAEMON_PORT);
+				sdSocket = new MulticastSocket(Utils.DAEMON_PORT);
 				sdSocket.joinGroup(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 				sdSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByName(ip)));
 			}
@@ -456,7 +453,7 @@ public class Client {
 				try {
 					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP()));
 					packet.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
-					packet.setPort(DNSConstants.MDNS_PORT);
+					packet.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(packet);
 					route(packet);
 				}
@@ -505,7 +502,7 @@ public class Client {
 				try {
 					DatagramPacket sendPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
 					sendPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
-					sendPacket.setPort(DNSConstants.MDNS_PORT);
+					sendPacket.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(sendPacket);
 				}
 				catch(IOException exc) {

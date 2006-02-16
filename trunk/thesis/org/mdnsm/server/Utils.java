@@ -9,8 +9,10 @@ import java.util.*;
  * @version $Id: Utils.java,v 1.6 2005/11/04 00:10:51 drb80 Exp $
  */
 
-public class Utils
-{
+public class Utils {
+	
+	// Ports on which the server daemons communicate
+	public static final int DAEMON_PORT = 1337;
 	// Port on which servers contact clients
 	public static final int CLIENT_COM = 1338;
 	// Port on which clients contact servers
@@ -18,7 +20,7 @@ public class Utils
 	// Port for interserver communication
 	public static final int SERVER_SERVER_COMM = 1340;
 	
-	public static final String SERVER_MULTICAST_GROUP = "224.0.0.1";
+	public static final String SERVER_MULTICAST_GROUP = "224.0.0.251";
 	
     /** The request/respose numbers */
     public static final int A		= 1;
