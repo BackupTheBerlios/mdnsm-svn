@@ -1187,6 +1187,7 @@ public class JmDNS
                 {
                     packet.setLength(buf.length);
                     socket.receive(packet);
+                    System.out.println("binnenkomende stuff op " + ip + " van " + packet.getAddress().getHostAddress());
                     if (state == DNSState.CANCELED)
                     {
                         break;
@@ -1207,7 +1208,6 @@ public class JmDNS
                             {
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
-                                	System.out.println("query op " + ip + " van " + packet.getAddress().getHostAddress());
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
                                 }
                                 handleQuery(msg, group, DNSConstants.MDNS_PORT);
