@@ -22,8 +22,7 @@ public class Client {
 	private final int SERVER_CLEAN_INTERVAL = 300000;
 	
 	// Ports on which the server daemons communicate
-	private final int DAEMON_SEND_PORT = 1336;
-	private final int DAEMON_RECEIVE_PORT = 1337;
+	private final int DAEMON_PORT = 1337;
 	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss;
@@ -379,8 +378,7 @@ public class Client {
 	public class ServerDaemon implements Runnable {
 		
 		private String ip;
-		private MulticastSocket sendSocket;
-		private DatagramSocket receiveSocket;
+		private MulticastSocket sdSocket;
 		private boolean RUNNING;
 		
 		/**
@@ -389,10 +387,9 @@ public class Client {
 		public ServerDaemon(String ip) {
 			this.ip = ip;
 			try {
-				sendSocket = new MulticastSocket(DAEMON_SEND_PORT);
-				sendSocket.joinGroup(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
-				sendSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByName(ip)));
-				receiveSocket = new DatagramSocket(DAEMON_RECEIVE_PORT, InetAddress.getByName(ip));
+				sdSocket = new MulticastSocket(DAEMON_PORT);
+				sdSocket.joinGroup(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+				sdSocket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByName(ip)));
 			}
 			catch(IOException exc) {
 				System.out.println("Client.ServerDaemon.ServerDaemon: I/O exception occured when trying to initialize multicast sockets.");
@@ -419,7 +416,7 @@ public class Client {
 			while(RUNNING) {
 				try {
 					DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
-					receiveSocket.receive(packet);
+					sdSocket.receive(packet);
 					ssCache.addServer(getRRFromPacket(packet));
 					route(packet);
 				}
@@ -442,8 +439,7 @@ public class Client {
 		 */
 		public void stop() {
 			RUNNING = false;
-			receiveSocket.close();
-			sendSocket.close();
+			sdSocket.close();
 		}
 		
 		/**
@@ -458,7 +454,7 @@ public class Client {
 					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP()));
 					packet.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					packet.setPort(DNSConstants.MDNS_PORT);
-					sendSocket.send(packet);
+					sdSocket.send(packet);
 					route(packet);
 				}
 				catch(IOException exc) {
@@ -507,7 +503,7 @@ public class Client {
 					DatagramPacket sendPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
 					sendPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					sendPacket.setPort(DNSConstants.MDNS_PORT);
-					sendSocket.send(sendPacket);
+					sdSocket.send(sendPacket);
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();

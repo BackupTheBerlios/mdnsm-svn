@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.*;
+import org.mdnsm.server.*;
 
 // REMIND: multiple IP addresses
 
