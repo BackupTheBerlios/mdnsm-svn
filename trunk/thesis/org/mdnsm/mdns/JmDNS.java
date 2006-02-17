@@ -1187,7 +1187,6 @@ public class JmDNS
                 {
                     packet.setLength(buf.length);
                     socket.receive(packet);
-                    System.out.println("packet op " + ip + " van " + packet.getAddress().getHostAddress());
                     if (state == DNSState.CANCELED)
                     {
                         break;
@@ -1432,7 +1431,6 @@ public class JmDNS
                     if (out != null)
                     {
                         logger.finer("run() JmDNS probing #" + taskState);
-                        System.out.println("prober sending");
                         send(out);
                     }
                     else
@@ -1580,7 +1578,6 @@ public class JmDNS
                 if (out != null)
                 {
                     logger.finer("run() JmDNS announcing #" + taskState);
-                    System.out.println("announcer sending");
                     send(out);
                 }
                 else
@@ -1721,7 +1718,6 @@ public class JmDNS
                 if (out != null)
                 {
                     logger.finer("run() JmDNS announced");
-                    System.out.println("renewer sending");
                     send(out);
                 }
                 else
@@ -2001,7 +1997,6 @@ public class JmDNS
                             {
                                 out = addAnswer(in, addr, port, out, (DNSRecord) i.next());
                             }
-                            System.out.println("responder sending");
                             send(out);
                         }
                         cancel();
@@ -2051,7 +2046,6 @@ public class JmDNS
                         {
                             out.addAnswer(new DNSRecord.Pointer("_services._mdns._udp.local.", DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, (String) iterator.next()), 0);
                         }
-                        System.out.println("typeresolver sending");
                         send(out);
                     }
                     else
@@ -2127,7 +2121,6 @@ public class JmDNS
                                 break;
                             }
                         }
-                        System.out.println("serviceresolver sending");
                         send(out);
                     }
                     else
@@ -2203,7 +2196,6 @@ public class JmDNS
                         {
                             out.addAnswer((DNSRecord) cache.get(info.server, DNSConstants.TYPE_A, DNSConstants.CLASS_IN), now);
                         }
-                        System.out.println("serviceinforesolver sending");
                         send(out);
                     }
                     else
@@ -2314,7 +2306,6 @@ public class JmDNS
                             out.addAnswer(answer, 0);
                         }
                     }
-                    System.out.println("canceler sending");
                     send(out);
                 }
                 else
