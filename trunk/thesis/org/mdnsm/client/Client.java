@@ -30,13 +30,16 @@ public class Client {
 	
 	private Timer timer;
 	
+	// Listener for usable server information
+	private ServerListener serverListener;
+	// Server checker for one-IP machines
+	private ServerChecker serverChecker;
+	
 	// Server daemons associated with this clients server instances
 	private Hashtable serverDaemons;
 	// List of other servers on the network
 	private SSCache ssCache;
 	
-	// Listener for usable server information
-	private ServerListener serverListener;
 	// List of servers this client can contact to get information
 	// (should not be used when this client has server instances running)
 	private Vector reachableServers;
@@ -68,6 +71,7 @@ public class Client {
 		serverDaemons = new Hashtable();
 		reachableServers = new Vector();
 		serverListener = new ServerListener();
+		serverChecker = new ServerChecker();
 		infoListeners = new Hashtable();
 		sockets = new Hashtable();
 		socketListeners = new Hashtable();
@@ -154,8 +158,9 @@ public class Client {
 			try {
 				String ip = (String)ips.get(0);
 				jmdnss.put(ip, new JmDNS(ip));
-				// Activate server listener
+				// Activate server listener and checker
 				((JmDNS)jmdnss.get(ip)).addServiceListener("_sserver._udp.*.local.", serverListener);
+				serverChecker.start();
 				DatagramSocket socket = new DatagramSocket(Utils.CLIENT_COM, InetAddress.getByName(ip));
 				sockets.put(ip, socket);
 				SocketListener listener = new SocketListener(socket);
@@ -171,6 +176,7 @@ public class Client {
 			// Coming from 1 IP, thus meaning activated server listener, implies deactivating the server listener and socket listener
 			if(jmdnss.size() == 1) {
 				((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).removeServiceListener("_sserver._udp.*.local.", serverListener);
+				serverChecker.cancel();
 			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
@@ -360,6 +366,26 @@ public class Client {
 				}
 			}
 			reachableServers.remove(TBR);
+		}
+		
+	}
+	
+	/**
+	 * Timertask polling the network for available servers.
+	 * Only used in the case of one IP on the local machine.
+	 * 
+	 * @author	Frederic Cremer
+	 */
+	private class ServerChecker extends TimerTask {
+		
+		public void start() {
+			timer.schedule(this, Utils.SERVER_CHECK_INTERVAL, Utils.SERVER_CHECK_INTERVAL);
+		}
+		
+		public void run() {
+			JmDNS jmdns = (JmDNS)jmdnss.values().iterator().next();
+			jmdns.requestServices("_sserver._udp.*.local.");
+			// Clean up server list
 		}
 		
 	}

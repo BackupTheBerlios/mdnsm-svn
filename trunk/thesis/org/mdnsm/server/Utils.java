@@ -11,6 +11,8 @@ import java.util.*;
 
 public class Utils {
 	
+	// TODO: juiste waarden
+	
 	// Ports on which the server daemons communicate
 	public static final int DAEMON_PORT = 1337;
 	// Port on which servers contact clients
@@ -21,6 +23,8 @@ public class Utils {
 	public static final int SERVER_SERVER_COMM = 1340;
 	
 	public static final String SERVER_MULTICAST_GROUP = "224.0.0.251";
+	
+	public static final int SERVER_CHECK_INTERVAL = 5000;
 	
     /** The request/respose numbers */
     public static final int A		= 1;

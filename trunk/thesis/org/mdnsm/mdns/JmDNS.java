@@ -487,6 +487,14 @@ public class JmDNS
         }
     }
 
+    /**
+     * Request a single polling for the given type.
+     * Should only be used as handler from within the Client class.
+     */
+    public void requestServices(String type) {
+    	(new ServiceResolver(type)).start();
+    }
+    
     void handleServiceResolved(ServiceInfo info)
     {
         List list = (List) serviceListeners.get(convertToType(info.type.toLowerCase()));
