@@ -171,6 +171,9 @@ public class Client {
 				System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 			}
 		}
+		
+		// TODO: juiste TTL-waarden voor server-records
+		
 		// Multiple IPs detected
 		else if(ips.size() > 1) {
 			// Coming from 1 IP, thus meaning activated server listener, implies deactivating the server listener and socket listener
@@ -342,9 +345,9 @@ public class Client {
 		 */
 		public void serviceAdded(ServiceEvent event) {
 			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
-			removeInfo(info);
+			removeServer(info);
 			System.out.println("server added: " + info.getQualifiedName());
-			reachableServers.add(info);
+			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()));
 			((JmDNS)jmdnss.values().iterator().next()).requestServiceInfo(event.getType(), event.getName());
 		}
 		
@@ -353,7 +356,7 @@ public class Client {
 		 */
 		public void serviceRemoved(ServiceEvent event) {
 			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
-			removeInfo(info);
+			removeServer(info);
 		}
 		
 		/**
@@ -361,23 +364,26 @@ public class Client {
 		 */
 		public void serviceResolved(ServiceEvent event) {
 			ServiceInfo info = event.getInfo();
-			removeInfo(info);
+			removeServer(info);
 			System.out.println("server modified: " + info.getQualifiedName());
-			reachableServers.add(info);
+			reachableServers.add(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
+			reachableServers.add(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
 		}
 		
 		/**
 		 * Remove the given server information from the list of reachable servers.
 		 */
-		private void removeInfo(ServiceInfo info) {
-			ServiceInfo TBR = null;
-			for(Iterator i = reachableServers.iterator(); i.hasNext();) {
-				ServiceInfo server = (ServiceInfo)i.next();
-				if(server.getType().equals(info.getType()) && server.getName().equals(info.getName())) {
-					TBR = server;
-				}
+		private void removeServer(ServiceInfo info) {
+			if(info.hasData()) {
+				DNSEntry entry = new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer());
+				reachableServers.remove(entry);
+				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes());
+				reachableServers.remove(entry);
 			}
-			reachableServers.remove(TBR);
+			else {
+				DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName());
+				reachableServers.remove(entry);
+			}
 		}
 		
 	}

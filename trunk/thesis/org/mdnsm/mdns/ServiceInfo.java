@@ -532,7 +532,7 @@ public class ServiceInfo implements DNSListener {
 	/**
 	 * Returns true if the service info is filled with data.
 	 */
-	boolean hasData() {
+	public boolean hasData() {
 		return server != null && addr != null && text != null;
 	}
 
