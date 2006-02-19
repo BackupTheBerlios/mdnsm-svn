@@ -42,7 +42,7 @@ public class Client {
 	
 	// List of servers this client can contact to get information
 	// (should not be used when this client has server instances running)
-	private Vector reachableServers;
+	private DNSCache reachableServers;
 	
 	// Listeners for information
 	private Hashtable infoListeners;
@@ -69,7 +69,7 @@ public class Client {
 		timer = new Timer();
 		ssCache = new SSCache();
 		serverDaemons = new Hashtable();
-		reachableServers = new Vector();
+		reachableServers = new DNSCache(10);
 		serverListener = new ServerListener();
 		serverChecker = new ServerChecker();
 		infoListeners = new Hashtable();
@@ -184,7 +184,10 @@ public class Client {
 				// IP already existed before without server, start server and server daemon for it
 				if(jmdnss.containsKey(ip) && !servers.containsKey(ip)) {
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
-					reachableServers.add(((ServiceServer)servers.get(ip)).getInfo());
+					ServiceInfo info = ((ServiceServer)servers.get(ip)).getInfo();
+					reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()));
+					reachableServers.add(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
+					reachableServers.add(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
 					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 				}
@@ -197,7 +200,10 @@ public class Client {
 						System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 					}
 					servers.put(ip, new ServiceServer(this, (JmDNS)jmdnss.get(ip), ip));
-					reachableServers.add(((ServiceServer)servers.get(ip)).getInfo());
+					ServiceInfo info = ((ServiceServer)servers.get(ip)).getInfo();
+					reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()));
+					reachableServers.add(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
+					reachableServers.add(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
 					serverDaemons.put(ip, new ServerDaemon(ip));
 					new Thread((ServerDaemon)serverDaemons.get(ip)).start();
 					try {
@@ -233,7 +239,13 @@ public class Client {
 		while(existingServers.hasMoreElements()) {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
-				reachableServers.remove(((ServiceServer)servers.get(key)).getInfo());
+				ServiceInfo info = ((ServiceServer)servers.get(key)).getInfo();
+				DNSEntry entry = reachableServers.get(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, 0, info.getQualifiedName()));
+				reachableServers.remove(entry);
+				entry = reachableServers.get(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
+				reachableServers.remove(entry);
+				entry = reachableServers.get(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
+				reachableServers.remove(entry);
 				((ServiceServer)servers.get(key)).shutdown();
 				((ServerDaemon)serverDaemons.get(key)).stop();
 				((SocketListener)socketListeners.get(key)).stop();
