@@ -242,6 +242,7 @@ public class Client {
 		while(existingServers.hasMoreElements()) {
 			String key = (String)existingServers.nextElement();
 			if(!ips.contains(key)) {
+				((JmDNS)jmdnss.get(key)).rebind((String)ips.get(0));
 				ServiceInfo info = ((ServiceServer)servers.get(key)).getInfo();
 				DNSEntry entry = reachableServers.get(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, 0, info.getQualifiedName()));
 				reachableServers.remove(entry);

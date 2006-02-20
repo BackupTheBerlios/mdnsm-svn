@@ -301,7 +301,7 @@ public class JmDNS
             }
             catch (Exception exception)
             {
-                logger.log(Level.WARNING, "closeMulticastSocket() Close socket exception ", exception);
+                //logger.log(Level.WARNING, "closeMulticastSocket() Close socket exception ", exception);
             }
             socket = null;
         }
@@ -2670,5 +2670,14 @@ public class JmDNS
     	}
     	
     }
-
+    
+    public void rebind(String ip) {
+    	try {
+    		socket.setNetworkInterface(NetworkInterface.getByInetAddress(InetAddress.getByName(ip)));
+    	}
+    	catch(Exception exc) {
+    		
+    	}
+    }
+    
 }
