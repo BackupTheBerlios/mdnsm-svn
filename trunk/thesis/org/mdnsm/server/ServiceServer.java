@@ -30,6 +30,9 @@ public class ServiceServer {
 	private ServiceInfo serviceInfo;
 	private int infoTtl = 360000;
 	
+	private STypeListener serviceTypeListener;
+	private Vector serviceListeners;
+	
 	private Timer timer;
 	
 	private ClientListener clientListener;
@@ -69,7 +72,7 @@ public class ServiceServer {
 		
 		// Start listening for new service types on the local subnet
 		try {
-			jmdns.addServiceTypeListener(new STypeListener());
+			jmdns.addServiceTypeListener(serviceTypeListener);
 		}
 		catch(IOException exc) {
 			System.out.println("DNSServer.DNSServer: some I/O exception occured while adding TypeListener:");
@@ -90,6 +93,8 @@ public class ServiceServer {
 		this.jmdns = jmdns;
 		this.hostAddress = hostAddress;
 		timer = new Timer();
+		serviceTypeListener = new STypeListener();
+		serviceListeners = new Vector();
 		try {
 			clientSocket = new DatagramSocket(Utils.SERVER_COM, InetAddress.getByName(hostAddress));
 			serverSocket = new DatagramSocket(Utils.SERVER_SERVER_COMM, InetAddress.getByName(hostAddress));
@@ -124,7 +129,9 @@ public class ServiceServer {
 					typesDiscovered.add(event.getType());
 				//}
 				System.out.println("ServiceServer.serviceTypeAdded ("+hostAddress+"): " + event.getType());
-				jmdns.addServiceListener(event.getType(), new SListener());
+				SListener l = new SListener(event.getType());
+				serviceListeners.add(l);
+				jmdns.addServiceListener(event.getType(), l);
 			}
 			else {
 				System.out.println("ServiceServer.serviceTypeAdded ("+hostAddress+"): service type exists: " + event.getType());
@@ -139,6 +146,12 @@ public class ServiceServer {
 	 * @author	Frederic Cremer
 	 */
 	private class SListener implements ServiceListener {
+		
+		protected String type;
+		
+		protected SListener(String type) {
+			this.type = type;
+		}
 		
 		/**
 		 * A new service is discovered and added to the server's cache.
@@ -485,6 +498,11 @@ public class ServiceServer {
 		serverSocket.close();
 		
 		jmdns.unregisterService(serviceInfo);
+		jmdns.removeServiceTypeListener(serviceTypeListener);
+		for(Iterator i = serviceListeners.iterator(); i.hasNext();) {
+			SListener s = (SListener)i.next();
+			jmdns.removeServiceListener(s.type, s);
+		}
 		
 		boolean left = true;
 		// Remove server PTR records from the server cache

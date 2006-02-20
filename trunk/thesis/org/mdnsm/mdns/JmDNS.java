@@ -6,6 +6,7 @@
 package org.mdnsm.mdns;
 
 import java.io.IOException;
+import java.net.*;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -2330,8 +2331,8 @@ public class JmDNS
             }
             catch (Throwable e)
             {
-                logger.log(Level.WARNING, "run() exception ", e);
-                recover();
+                //logger.log(Level.WARNING, "run() exception ", e);
+                //recover();
             }
         }
     }
@@ -2354,7 +2355,7 @@ public class JmDNS
      */
     protected void recover()
     {
-        logger.finer("recover()");
+        //logger.finer("recover()");
         // We have an IO error so lets try to recover if anything happens lets close it.
         // This should cover the case of the IP address changing under our feet
         if (DNSState.CANCELED != state)
@@ -2362,7 +2363,7 @@ public class JmDNS
             synchronized (this)
             { // Synchronize only if we are not already in process to prevent dead locks
                 //
-                logger.finer("recover() Cleanning up");
+                //logger.finer("recover() Cleanning up");
                 // Stop JmDNS
                 state = DNSState.CANCELED; // This protects against recursive calls
 
@@ -2377,7 +2378,7 @@ public class JmDNS
                 closeMulticastSocket();
                 //
                 cache.clear();
-                logger.finer("recover() All is clean");
+                //logger.finer("recover() All is clean");
                 //
                 // All is clear now start the services
                 //
@@ -2388,9 +2389,9 @@ public class JmDNS
                 }
                 catch (Exception exception)
                 {
-                    logger.log(Level.WARNING, "recover() Start services exception ", exception);
+                    //logger.log(Level.WARNING, "recover() Start services exception ", exception);
                 }
-                logger.log(Level.WARNING, "recover() We are back!");
+                //logger.log(Level.WARNING, "recover() We are back!");
             }
         }
     }
