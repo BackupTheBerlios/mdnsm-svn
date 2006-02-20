@@ -431,7 +431,7 @@ public class Client {
 		
 		public void run() {
 			for (Iterator i = reachableServers.iterator(); i.hasNext(); ) {
-				for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n.next()) {
+				for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n = n.next()) {
 					DNSRecord entry = (DNSRecord)n.getValue();
 					if(entry.isExpired(System.currentTimeMillis())) {
 						reachableServers.remove(entry);
