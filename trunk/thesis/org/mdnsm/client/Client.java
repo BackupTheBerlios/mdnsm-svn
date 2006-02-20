@@ -34,6 +34,8 @@ public class Client {
 	private ServerListener serverListener;
 	// Server checker for one-IP machines
 	private ServerChecker serverChecker;
+	// Server cleaner for one-IP machines
+	private ServerCleaner serverCleaner;
 	
 	// Server daemons associated with this clients server instances
 	private Hashtable serverDaemons;
@@ -72,6 +74,7 @@ public class Client {
 		reachableServers = new DNSCache(10);
 		serverListener = new ServerListener();
 		serverChecker = new ServerChecker();
+		serverCleaner = new ServerCleaner();
 		infoListeners = new Hashtable();
 		sockets = new Hashtable();
 		socketListeners = new Hashtable();
@@ -152,6 +155,8 @@ public class Client {
 			// Reactivate the server listener (one server left implies that before multiple server instances
 			// were running, and thus the server listener was deactivated)
 			((JmDNS)jmdnss.get(key)).addServiceListener("_sserver._udp.*.local.", serverListener);
+			serverChecker.start();
+			serverCleaner.start();
 		}
 		// One IP detected, no active JmDNS instances (typically at startup with a single NIC).
 		if(ips.size() == 1 && jmdnss.size() == 0) {
@@ -161,6 +166,7 @@ public class Client {
 				// Activate server listener and checker
 				((JmDNS)jmdnss.get(ip)).addServiceListener("_sserver._udp.*.local.", serverListener);
 				serverChecker.start();
+				serverCleaner.start();
 				DatagramSocket socket = new DatagramSocket(Utils.CLIENT_COM, InetAddress.getByName(ip));
 				sockets.put(ip, socket);
 				SocketListener listener = new SocketListener(socket);
@@ -180,6 +186,7 @@ public class Client {
 			if(jmdnss.size() == 1) {
 				((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).removeServiceListener("_sserver._udp.*.local.", serverListener);
 				serverChecker.cancel();
+				serverCleaner.stop();
 			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
@@ -367,6 +374,7 @@ public class Client {
 			ServiceInfo info = event.getInfo();
 			removeServer(info);
 			System.out.println("server modified: " + info.getQualifiedName());
+			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()));
 			reachableServers.add(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
 			reachableServers.add(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
 		}
@@ -375,14 +383,12 @@ public class Client {
 		 * Remove the given server information from the list of reachable servers.
 		 */
 		private void removeServer(ServiceInfo info) {
+			DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName());
+			reachableServers.remove(entry);
 			if(info.hasData()) {
-				DNSEntry entry = new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer());
+				entry = new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer());
 				reachableServers.remove(entry);
 				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes());
-				reachableServers.remove(entry);
-			}
-			else {
-				DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName());
 				reachableServers.remove(entry);
 			}
 		}
@@ -404,7 +410,41 @@ public class Client {
 		public void run() {
 			JmDNS jmdns = (JmDNS)jmdnss.values().iterator().next();
 			jmdns.requestServices("_sserver._udp.*.local.");
-			// Clean up server list
+		}
+		
+	}
+	
+	/**
+	 * Timertask cleaning up the list of available servers.
+	 * Only used in the case of one IP on the local machine.
+	 * 
+	 * @author	Frederic Cremer
+	 *
+	 */
+	private class ServerCleaner extends TimerTask {
+		
+		private boolean needed = true;
+		
+		public void start() {
+			timer.schedule(this, Utils.SERVER_CLEAN_INTERVAL, Utils.SERVER_CLEAN_INTERVAL);
+		}
+		
+		public void run() {
+			for (Iterator i = reachableServers.iterator(); i.hasNext(); ) {
+				for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n.next()) {
+					DNSRecord entry = (DNSRecord)n.getValue();
+					if(entry.isExpired(System.currentTimeMillis())) {
+						reachableServers.remove(entry);
+					}
+				}
+			}
+			if(!needed) {
+				cancel();
+			}
+		}
+		
+		public void stop() {
+			needed = false;
 		}
 		
 	}

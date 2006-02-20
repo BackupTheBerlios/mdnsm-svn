@@ -25,6 +25,7 @@ public class Utils {
 	public static final String SERVER_MULTICAST_GROUP = "224.0.0.251";
 	
 	public static final int SERVER_CHECK_INTERVAL = 5000;
+	public static final int SERVER_CLEAN_INTERVAL = 10000;
 	
     /** The request/respose numbers */
     public static final int A		= 1;
