@@ -1196,6 +1196,7 @@ public class JmDNS
                 {
                     packet.setLength(buf.length);
                     socket.receive(packet);
+                    System.out.println("packet from " + packet.getAddress().getHostAddress());
                     if (state == DNSState.CANCELED)
                     {
                         break;
