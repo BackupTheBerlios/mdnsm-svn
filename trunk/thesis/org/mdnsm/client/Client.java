@@ -430,6 +430,8 @@ public class Client {
 		}
 		
 		public void run() {
+			JmDNS jmdns = (JmDNS)jmdnss.values().iterator().next();
+			
 			// Copy existing entries into copy list
 			// (for concurrency support)
 			// (code based on JmDNS.RecordReaper code)
@@ -446,6 +448,7 @@ public class Client {
             for (Iterator i = list.iterator(); i.hasNext();) {
                 DNSRecord c = (DNSRecord) i.next();
                 if (c.isExpired(now)) {
+                	jmdns.removeFromCache(c);
                     reachableServers.remove(c);
                 }
             }

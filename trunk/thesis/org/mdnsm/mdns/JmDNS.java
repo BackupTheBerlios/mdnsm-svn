@@ -1214,7 +1214,6 @@ public class JmDNS
                         {
                             if (msg.isQuery())
                             {
-                            	//System.out.println(time.format(new Date()) + ": query from " + packet.getAddress().getHostAddress());
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
@@ -2679,6 +2678,13 @@ public class JmDNS
     	}
     	catch(Exception exc) {
     		
+    	}
+    }
+    
+    public void removeFromCache(DNSRecord rec) {
+    	boolean left = true;
+    	while(left) {
+    		left = cache.remove(rec);
     	}
     }
     
