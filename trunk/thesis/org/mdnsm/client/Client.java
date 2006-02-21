@@ -398,8 +398,10 @@ public class Client {
 		 * servers.
 		 */
 		public void updateTTLs(DNSRecord rec) {
-			DNSEntry entry = reachableServers.get(rec);
-			((DNSRecord)entry).ttl = rec.ttl;
+			for (DNSCache.CacheNode n = (DNSCache.CacheNode) reachableServers.find(rec.getName()); n != null; n.next()) {
+				 DNSEntry entry = n.getValue();
+				 ((DNSRecord)entry).ttl = rec.ttl;
+			}
 		}
 		
 	}

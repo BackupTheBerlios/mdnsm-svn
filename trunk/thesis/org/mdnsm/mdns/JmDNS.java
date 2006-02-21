@@ -1038,18 +1038,13 @@ public class JmDNS
                 else
                 {
                     c.resetTTL(rec);
-                    if(rec.getName().indexOf("_sserver._udp") == 0) {
+                    if(rec.getName().indexOf("_sserver._udp") >= 0) {
                     	List list = (List)serviceListeners.get("_sserver._udp.*.local.");
                     	for(Iterator it = list.iterator(); i.hasNext();) {
-                    		Client.ServerListener l = (Client.ServerListener)it.next();
-                    		l.updateTTLs(rec);
-                    	}
-                    }
-                    else if(rec.getName().indexOf("_sserver._udp") >= 0) {
-                    	List list = (List)serviceListeners.get("_sserver._udp.*.local.");
-                    	for(Iterator it = list.iterator(); i.hasNext();) {
-                    		Client.ServerListener l = (Client.ServerListener)it.next();
-                    		l.updateTTLs(rec);
+                    		ServiceListener l = (ServiceListener)it.next();
+                    		if(l instanceof Client.ServerListener) {
+                    			((Client.ServerListener)l).updateTTLs(rec);
+                    		}
                     	}
                     }
                     rec = c;
