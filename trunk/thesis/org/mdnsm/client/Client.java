@@ -823,15 +823,16 @@ public class Client {
         	// The safest thing here is to use the first one (may be the only one available).
         	DatagramSocket socket = (DatagramSocket)sockets.values().iterator().next();
         	for(Iterator i = reachableServers.iterator(); i.hasNext();) {
-        		String ip = (String)i.next();
-        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_COM);
-        		try {
-        			DNSIncoming msg = new DNSIncoming(packet);
-        		}
-        		catch (IOException exc) {
-        			exc.printStackTrace();
-        		}
-        		socket.send(packet);
+        		// TODO: deftig invullen
+        		//        		String ip = (String)i.next();
+//        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_COM);
+//        		try {
+//        			DNSIncoming msg = new DNSIncoming(packet);
+//        		}
+//        		catch (IOException exc) {
+//        			exc.printStackTrace();
+//        		}
+//        		socket.send(packet);
         	}
         }
     }
