@@ -2132,6 +2132,7 @@ public class JmDNS
                                 break;
                             }
                         }
+                        System.out.println("sending packet #" + count);
                         send(out);
                     }
                     else
