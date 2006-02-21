@@ -2686,11 +2686,11 @@ public class JmDNS
     	}
     }
     
-    public void removeFromCache(DNSRecord rec) {
-    	boolean left = true;
-    	while(left) {
-    		left = cache.remove(rec, true);
-    	}
-    }
+//    public void removeFromCache(DNSRecord rec) {
+//    	boolean left = true;
+//    	while(left) {
+//    		left = cache.remove(rec, true);
+//    	}
+//    }
     
 }
