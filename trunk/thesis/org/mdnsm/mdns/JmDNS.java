@@ -1040,10 +1040,12 @@ public class JmDNS
                     c.resetTTL(rec);
                     if(rec.getName().indexOf("_sserver._udp") >= 0) {
                     	List list = (List)serviceListeners.get("_sserver._udp.*.local.");
-                    	for(Iterator it = list.iterator(); i.hasNext();) {
-                    		ServiceListener l = (ServiceListener)it.next();
-                    		if(l instanceof Client.ServerListener) {
-                    			((Client.ServerListener)l).updateTTLs(rec);
+                    	if(list != null) {
+                    		for(Iterator it = list.iterator(); it.hasNext();) {
+                    			ServiceListener l = (ServiceListener)it.next();
+                        		if(l instanceof Client.ServerListener) {
+                        			((Client.ServerListener)l).updateTTLs(rec);
+                        		}
                     		}
                     	}
                     }
