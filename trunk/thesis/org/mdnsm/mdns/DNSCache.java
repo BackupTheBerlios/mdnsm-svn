@@ -171,39 +171,6 @@ public class DNSCache
         }
         return false;
     }
-    
-//    public synchronized boolean remove(DNSRecord rec, boolean bool) {
-//    	CacheNode node = (CacheNode) hashtable.get(rec.getName());
-//        if (node != null) {
-//            if (node.value.equals(rec)) {
-//                if (node.next == null) {
-//                    hashtable.remove(rec.getName());
-//                }
-//                else
-//                {
-//                    hashtable.put(rec.getName(), node.next);
-//                }
-//                size--;
-//                return true;
-//            }
-//
-//            CacheNode previous = node;
-//            node = node.next;
-//            while (node != null)
-//            {
-//                if (node.value.equals(rec))
-//                {
-//                    previous.next = node.next;
-//                    size--;
-//                    return true;
-//                }
-//                previous = node;
-//                node = node.next;
-//            }
-//            ;
-//        }
-//    	return false;
-//    }
 
     /**
      * Get a matching DNS entry from the table (using equals).

@@ -449,8 +449,8 @@ public class Client {
             for (Iterator i = list.iterator(); i.hasNext();) {
                 DNSRecord c = (DNSRecord) i.next();
                 if (c.isExpired(now)) {
-                	//jmdns.removeFromCache(c);
-                	System.out.println(Utils.getTime() + ": removing server info");                    reachableServers.remove(c);
+                	System.out.println(Utils.getTime() + ": removing server info");                    
+                	reachableServers.remove(c);
                 }
             }
 			if(!needed) {
