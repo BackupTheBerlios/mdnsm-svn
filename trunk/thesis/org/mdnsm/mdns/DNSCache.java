@@ -172,7 +172,7 @@ public class DNSCache
         return false;
     }
     
-    public synchronized boolean remove(DNSRecord rec) {
+    public synchronized boolean remove(DNSRecord rec, boolean bool) {
     	CacheNode node = (CacheNode) hashtable.get(rec.getName());
         if (node != null) {
             if (node.value.equals(rec)) {

@@ -253,9 +253,9 @@ public class Client {
 				ServiceInfo info = ((ServiceServer)servers.get(key)).getInfo();
 				DNSEntry entry = reachableServers.get(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, 0, info.getQualifiedName()));
 				reachableServers.remove(entry);
-				entry = reachableServers.get(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
+				entry = reachableServers.get(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, 0, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
 				reachableServers.remove(entry);
-				entry = reachableServers.get(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
+				entry = reachableServers.get(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, 0, info.getTextBytes()));
 				reachableServers.remove(entry);
 				((ServiceServer)servers.get(key)).shutdown();
 				((ServerDaemon)serverDaemons.get(key)).stop();
@@ -355,7 +355,7 @@ public class Client {
 			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
 			removeServer(info);
 			System.out.println("server added: " + info.getQualifiedName());
-			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName()));
+			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName()));
 			((JmDNS)jmdnss.values().iterator().next()).requestServiceInfo(event.getType(), event.getName());
 		}
 		
@@ -374,21 +374,21 @@ public class Client {
 			ServiceInfo info = event.getInfo();
 			removeServer(info);
 			System.out.println("server modified: " + info.getQualifiedName());
-			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()));
-			reachableServers.add(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
-			reachableServers.add(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()));
+			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName()));
+			reachableServers.add(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()));
+			reachableServers.add(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getTextBytes()));
 		}
 		
 		/**
 		 * Remove the given server information from the list of reachable servers.
 		 */
 		private void removeServer(ServiceInfo info) {
-			DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName());
+			DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName());
 			reachableServers.remove(entry);
 			if(info.hasData()) {
 				entry = new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer());
 				reachableServers.remove(entry);
-				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getTextBytes());
+				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getTextBytes());
 				reachableServers.remove(entry);
 			}
 		}

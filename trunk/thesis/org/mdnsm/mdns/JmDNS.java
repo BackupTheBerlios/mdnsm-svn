@@ -1021,6 +1021,8 @@ public class JmDNS
             boolean isInformative = false;
             DNSRecord rec = (DNSRecord) i.next();
             boolean expired = rec.isExpired(now);
+            //DateFormat time = DateFormat.getTimeInstance(DateFormat.MEDIUM, new Locale("de_DE"));
+            //System.out.println(time.format(new Date()) + ": answer: " + rec.getName());
             
             // update the cache
             DNSRecord c = (DNSRecord) cache.get(rec);
@@ -2684,7 +2686,7 @@ public class JmDNS
     public void removeFromCache(DNSRecord rec) {
     	boolean left = true;
     	while(left) {
-    		left = cache.remove(rec);
+    		left = cache.remove(rec, true);
     	}
     }
     
