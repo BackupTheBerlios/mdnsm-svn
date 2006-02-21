@@ -355,7 +355,7 @@ public class Client {
 			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
 			removeServer(info);
 			System.out.println("server added: " + info.getQualifiedName());
-			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()));
+			reachableServers.add(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName()));
 			((JmDNS)jmdnss.values().iterator().next()).requestServiceInfo(event.getType(), event.getName());
 		}
 		
@@ -383,12 +383,12 @@ public class Client {
 		 * Remove the given server information from the list of reachable servers.
 		 */
 		private void removeServer(ServiceInfo info) {
-			DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName());
+			DNSEntry entry = new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getQualifiedName());
 			reachableServers.remove(entry);
 			if(info.hasData()) {
-				entry = new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer());
+				entry = new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer());
 				reachableServers.remove(entry);
-				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes());
+				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getTextBytes());
 				reachableServers.remove(entry);
 			}
 		}
@@ -430,14 +430,25 @@ public class Client {
 		}
 		
 		public void run() {
-			for (Iterator i = reachableServers.iterator(); i.hasNext(); ) {
-				for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n = n.next()) {
-					DNSRecord entry = (DNSRecord)n.getValue();
-					if(entry.isExpired(System.currentTimeMillis())) {
-						reachableServers.remove(entry);
-					}
-				}
-			}
+			// Copy existing entries into copy list
+			// (for concurrency support)
+			// (code based on JmDNS.RecordReaper code)
+			List list = new ArrayList();
+            synchronized (reachableServers) {
+                for (Iterator i = reachableServers.iterator(); i.hasNext();) {
+                    for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n = n.next()) {
+                        list.add(n.getValue());
+                    }
+                }
+            }
+            // Now removing expired records
+            long now = System.currentTimeMillis();
+            for (Iterator i = list.iterator(); i.hasNext();) {
+                DNSRecord c = (DNSRecord) i.next();
+                if (c.isExpired(now)) {
+                    reachableServers.remove(c);
+                }
+            }
 			if(!needed) {
 				cancel();
 			}

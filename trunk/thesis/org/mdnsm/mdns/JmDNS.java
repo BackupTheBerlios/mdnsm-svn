@@ -1022,8 +1022,6 @@ public class JmDNS
             DNSRecord rec = (DNSRecord) i.next();
             boolean expired = rec.isExpired(now);
             
-            System.out.println("answer: " + rec.getName());
-            
             // update the cache
             DNSRecord c = (DNSRecord) cache.get(rec);
             if (c != null)
