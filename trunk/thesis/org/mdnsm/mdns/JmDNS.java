@@ -1021,7 +1021,9 @@ public class JmDNS
             boolean isInformative = false;
             DNSRecord rec = (DNSRecord) i.next();
             boolean expired = rec.isExpired(now);
-
+            
+            System.out.println("answer: " + rec.getName());
+            
             // update the cache
             DNSRecord c = (DNSRecord) cache.get(rec);
             if (c != null)
@@ -1214,7 +1216,7 @@ public class JmDNS
                         {
                             if (msg.isQuery())
                             {
-                            	System.out.println(time.format(new Date()) + ": query from " + packet.getAddress().getHostAddress());
+                            	//System.out.println(time.format(new Date()) + ": query from " + packet.getAddress().getHostAddress());
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
@@ -1223,7 +1225,7 @@ public class JmDNS
                             }
                             else
                             {
-                            	System.out.println(time.format(new Date()) + ": answer from " + packet.getAddress().getHostAddress());
+                            	//System.out.println(time.format(new Date()) + ": answer from " + packet.getAddress().getHostAddress());
                                 handleResponse(msg);
                             }
                         }
@@ -2132,7 +2134,6 @@ public class JmDNS
                                 break;
                             }
                         }
-                        System.out.println("sending packet #" + count);
                         send(out);
                     }
                     else
