@@ -1024,8 +1024,6 @@ public class JmDNS
             	rec.ttl = Utils.SERVER_TTL;
             }
             boolean expired = rec.isExpired(now);
-            //DateFormat time = DateFormat.getTimeInstance(DateFormat.MEDIUM, new Locale("de_DE"));
-            //System.out.println(time.format(new Date()) + ": answer: " + rec.getName());
             
             // update the cache
             DNSRecord c = (DNSRecord) cache.get(rec);

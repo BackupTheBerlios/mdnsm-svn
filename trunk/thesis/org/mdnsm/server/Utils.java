@@ -1,5 +1,6 @@
 package org.mdnsm.server;
 
+import java.text.DateFormat;
 import java.util.*;
 
 /**
@@ -376,4 +377,10 @@ public class Utils {
     	int index = tokens.indexOf("local");
     	return (String)tokens.get(index-4) + (String)tokens.get(index-3) + (String)tokens.get(index-2) + (String)tokens.get(index-1);
     }
+    
+    public static String getTime() {
+    	DateFormat time = DateFormat.getTimeInstance(DateFormat.MEDIUM, new Locale("de_DE"));
+    	return time.format(new Date());
+    }
+    
 }
