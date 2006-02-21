@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 public abstract class DNSRecord extends DNSEntry
 {
     private static Logger logger = Logger.getLogger(DNSRecord.class.toString());
-    int ttl;
+    public int ttl;
     private long created;
 
     /**

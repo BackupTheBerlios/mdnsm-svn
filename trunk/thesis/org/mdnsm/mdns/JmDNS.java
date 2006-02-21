@@ -13,6 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.*;
 import org.mdnsm.server.*;
+import org.mdnsm.client.*;
 
 // REMIND: multiple IP addresses
 
@@ -1040,15 +1041,15 @@ public class JmDNS
                     if(rec.getName().indexOf("_sserver._udp") == 0) {
                     	List list = (List)serviceListeners.get("_sserver._udp.*.local.");
                     	for(Iterator it = list.iterator(); i.hasNext();) {
-                    		ServiceListener l = (ServiceListener)it.next();
-                    		
+                    		Client.ServerListener l = (Client.ServerListener)it.next();
+                    		l.updateTTLs(rec);
                     	}
                     }
                     else if(rec.getName().indexOf("_sserver._udp") >= 0) {
                     	List list = (List)serviceListeners.get("_sserver._udp.*.local.");
                     	for(Iterator it = list.iterator(); i.hasNext();) {
-                    		ServiceListener l = (ServiceListener)it.next();
-                    		
+                    		Client.ServerListener l = (Client.ServerListener)it.next();
+                    		l.updateTTLs(rec);
                     	}
                     }
                     rec = c;

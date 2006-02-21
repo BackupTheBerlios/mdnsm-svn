@@ -346,7 +346,7 @@ public class Client {
 	 * 
 	 * @author	Frederic Cremer
 	 */
-	private class ServerListener implements ServiceListener {
+	public class ServerListener implements ServiceListener {
 		
 		/**
 		 * New server found, add to reachable server list.
@@ -391,6 +391,15 @@ public class Client {
 				entry = new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, Utils.SERVER_TTL, info.getTextBytes());
 				reachableServers.remove(entry);
 			}
+		}
+		
+		/**
+		 * Update the time-to-live of the corresponding record in the list of reachable
+		 * servers.
+		 */
+		public void updateTTLs(DNSRecord rec) {
+			DNSEntry entry = reachableServers.get(rec);
+			((DNSRecord)entry).ttl = rec.ttl;
 		}
 		
 	}
