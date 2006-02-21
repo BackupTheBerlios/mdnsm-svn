@@ -7,9 +7,7 @@ package org.mdnsm.mdns;
 
 import java.io.IOException;
 import java.net.*;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1210,11 +1208,13 @@ public class JmDNS
                         DNSIncoming msg = new DNSIncoming(packet);
                         logger.finest("SocketListener.run() JmDNS in:" + msg.print(true));
 
+                        DateFormat time = DateFormat.getTimeInstance(DateFormat.MEDIUM, new Locale("de_DE"));
+                        
                         synchronized (ioLock)
                         {
                             if (msg.isQuery())
                             {
-                            	System.out.println(System.currentTimeMillis() + ": query from " + packet.getAddress().getHostAddress());
+                            	System.out.println(time.format(new Date()) + ": query from " + packet.getAddress().getHostAddress());
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
@@ -1223,7 +1223,7 @@ public class JmDNS
                             }
                             else
                             {
-                            	System.out.println(System.currentTimeMillis() + ": answer from " + packet.getAddress().getHostAddress());
+                            	System.out.println(time.format(new Date()) + ": answer from " + packet.getAddress().getHostAddress());
                                 handleResponse(msg);
                             }
                         }
