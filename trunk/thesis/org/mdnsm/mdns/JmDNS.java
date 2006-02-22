@@ -918,6 +918,7 @@ public class JmDNS
         // add the new listener
         synchronized (this)
         {
+        	System.out.println("adding listener for " + question.getName() + " " + question.getType());
             listeners.add(listener);
         }
 
@@ -956,6 +957,12 @@ public class JmDNS
     {
         // We do not want to block the entire DNS while we are updating the record for each listener (service info)
         List listenerList = null;
+        try {
+        	Thread.sleep(1);  // TODO: for testing on slow computers only, SHOULD NOT BE HERE
+        }
+        catch(InterruptedException exc) {
+        	
+        }
         synchronized (this)
         {
             listenerList = new ArrayList(listeners);
