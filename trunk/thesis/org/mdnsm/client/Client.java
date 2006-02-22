@@ -398,7 +398,7 @@ public class Client {
 		 * servers.
 		 */
 		public void updateTTLs(DNSRecord rec) {
-			for (DNSCache.CacheNode n = (DNSCache.CacheNode) reachableServers.find(rec.getName()); n != null; n.next()) {
+			for (DNSCache.CacheNode n = (DNSCache.CacheNode) reachableServers.find(rec.getName()); n != null; n = n.next()) {
 				 DNSEntry entry = n.getValue();
 				 ((DNSRecord)entry).ttl = rec.ttl;
 			}
