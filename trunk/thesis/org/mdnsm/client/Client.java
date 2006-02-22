@@ -419,8 +419,6 @@ public class Client {
 		}
 		
 		public void run() {
-			System.out.println(Utils.getTime() + ": refreshing server info");
-			System.out.println(reachableServers.toString());
 			JmDNS jmdns = (JmDNS)jmdnss.values().iterator().next();
 			jmdns.requestServices("_sserver._udp.*.local.");
 		}
@@ -461,8 +459,6 @@ public class Client {
             for (Iterator i = list.iterator(); i.hasNext();) {
                 DNSRecord c = (DNSRecord) i.next();
                 if (c.isExpired(now)) {
-                	//jmdns.removeFromCache(c);
-                	System.out.println(Utils.getTime() + ": removing server info");
                     reachableServers.remove(c);
                 }
             }
