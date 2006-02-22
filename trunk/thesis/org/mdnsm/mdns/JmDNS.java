@@ -1222,8 +1222,6 @@ public class JmDNS
 
                         DNSIncoming msg = new DNSIncoming(packet);
                         logger.finest("SocketListener.run() JmDNS in:" + msg.print(true));
-
-                        DateFormat time = DateFormat.getTimeInstance(DateFormat.MEDIUM, new Locale("de_DE"));
                         
                         synchronized (ioLock)
                         {
@@ -1237,7 +1235,6 @@ public class JmDNS
                             }
                             else
                             {
-                            	//System.out.println(time.format(new Date()) + ": answer from " + packet.getAddress().getHostAddress());
                                 handleResponse(msg);
                             }
                         }

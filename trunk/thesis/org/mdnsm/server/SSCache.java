@@ -53,7 +53,8 @@ public class SSCache {
 	 */
 	public void clean() {
 		long now = System.currentTimeMillis();
-		Iterator iterator = elements.iterator();
+		Vector copy = new Vector(elements);
+		Iterator iterator = copy.iterator();
 		while(iterator.hasNext()) {
 			SSElement next = (SSElement)iterator.next();
 			if(next.getExpirationTime() <= now) {
