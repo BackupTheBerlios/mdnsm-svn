@@ -828,22 +828,36 @@ public class Client {
     private void sendToServers(DNSOutgoing out) throws IOException {
         out.finish();
         if (!out.isEmpty()) {
+        	Vector serverIPs = getServerIPs();
         	// Any of the available sockets can be used to send a packet.
         	// The safest thing here is to use the first one (may be the only one available).
         	DatagramSocket socket = (DatagramSocket)sockets.values().iterator().next();
-        	for(Iterator i = reachableServers.iterator(); i.hasNext();) {
-        		// TODO: deftig invullen
-        		//        		String ip = (String)i.next();
-//        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_COM);
-//        		try {
-//        			DNSIncoming msg = new DNSIncoming(packet);
-//        		}
-//        		catch (IOException exc) {
-//        			exc.printStackTrace();
-//        		}
-//        		socket.send(packet);
+        	for(Iterator i = serverIPs.iterator(); i.hasNext();) {
+        		String ip = (String)i.next();
+        		DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(ip), Utils.SERVER_COM);
+        		socket.send(packet);
         	}
         }
+    }
+    
+    /**
+     * Get a list of all reachable server IPs.
+     */
+    private Vector getServerIPs() {
+    	Vector result = new Vector();
+    	for (Iterator i = reachableServers.iterator(); i.hasNext(); ) {
+    		for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n = n.next()) {
+    			DNSEntry entry = n.getValue();
+    			String ip = "";
+    			if(entry.getType() == DNSConstants.TYPE_SRV || entry.getType() == DNSConstants.TYPE_TXT) {
+    				ip = Utils.getIPFromType(entry.getName());
+    				if(!result.contains(ip)) {
+    					result.add(ip);
+    				}
+    			}
+    		}
+    	}
+    	return result;
     }
     
     /**

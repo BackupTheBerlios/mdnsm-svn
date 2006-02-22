@@ -214,7 +214,7 @@ public class DNSCache
     {
         return Collections.unmodifiableCollection(hashtable.values()).iterator();
     }
-
+    
     /**
      * Iterate only over items with matching name.
      * Returns an instance of DNSCache.CacheNode or null.
