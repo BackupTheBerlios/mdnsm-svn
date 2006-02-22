@@ -80,6 +80,29 @@ public class Client {
 		socketListeners = new Hashtable();
 	}
 	
+	/**
+	 * Register a service running on this computer.
+	 */
+	public void registerService(ServiceInfo info) {
+		for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
+			try {
+				((JmDNS)i.next()).registerService(info);
+			}
+			catch(IOException exc) {
+				exc.printStackTrace();
+			}
+		}
+	}
+	
+	/**
+	 * Unregister a service running on this computer.
+	 */
+	public void unregisterService(ServiceInfo info) {
+		for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
+			((JmDNS)i.next()).unregisterService(info);
+		}
+	}
+	
 	public DNSCache getServerCache() {
 		return serverCache;
 	}
