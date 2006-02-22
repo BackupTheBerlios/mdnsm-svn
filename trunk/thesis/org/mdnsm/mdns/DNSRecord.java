@@ -166,7 +166,7 @@ public abstract class DNSRecord extends DNSEntry
      * Reset the TTL of a record. This avoids having to
      * update the entire record in the cache.
      */
-    void resetTTL(DNSRecord other)
+    public void resetTTL(DNSRecord other)
     {
         created = other.created;
         ttl = other.ttl;

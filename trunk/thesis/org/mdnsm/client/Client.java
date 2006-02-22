@@ -400,7 +400,7 @@ public class Client {
 		public void updateTTLs(DNSRecord rec) {
 			for (DNSCache.CacheNode n = (DNSCache.CacheNode) reachableServers.find(rec.getName()); n != null; n = n.next()) {
 				 DNSEntry entry = n.getValue();
-				 ((DNSRecord)entry).ttl = rec.ttl;
+				 ((DNSRecord)entry).resetTTL(rec);
 			}
 		}
 		
@@ -420,6 +420,7 @@ public class Client {
 		
 		public void run() {
 			System.out.println(Utils.getTime() + ": refreshing server info");
+			System.out.println(reachableServers.toString());
 			JmDNS jmdns = (JmDNS)jmdnss.values().iterator().next();
 			jmdns.requestServices("_sserver._udp.*.local.");
 		}
