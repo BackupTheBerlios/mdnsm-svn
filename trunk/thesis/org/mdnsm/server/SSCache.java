@@ -58,6 +58,7 @@ public class SSCache {
 		while(iterator.hasNext()) {
 			SSElement next = (SSElement)iterator.next();
 			if(next.getExpirationTime() <= now) {
+				System.out.println("server " + next.getRR().getDomain() + " removed");
 				elements.remove(next);
 				next.terminate();
 			}

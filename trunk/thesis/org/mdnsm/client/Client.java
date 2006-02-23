@@ -546,7 +546,7 @@ public class Client {
 				try {
 					DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
 					sdSocket.receive(packet);
-					System.out.println("server " + packet.getAddress() + " announced");
+					System.out.println("@"+getIP()+" server " + packet.getAddress().getHostAddress() + " announced");
 					ssCache.addServer(getRRFromPacket(packet));
 					route(packet);
 				}
@@ -581,11 +581,20 @@ public class Client {
 			
 			public void run() {
 				try {
-					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP()));
+					String subnets = "";
+					for(Iterator i = getIPs().iterator(); i.hasNext();) {
+						if(subnets.equals("")) {
+							subnets = getSubnet((String)i.next());
+						}
+						else {
+							subnets = subnets + "," + getSubnet((String)i.next());
+						}
+					}
+					DatagramPacket packet = constructPacket(getIP(), subnets);
 					packet.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					packet.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(packet);
-					route(packet);
+					//route(packet);
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();
@@ -611,33 +620,32 @@ public class Client {
 		 * Route the given packet to other local servers.
 		 */
 		private void route(DatagramPacket packet) {
-			Enumeration e = serverDaemons.elements();
-			while(e.hasMoreElements()) {
-				ServerDaemon s = (ServerDaemon)e.nextElement();
-				if(!s.getIP().equals(getIP())) {
-					s.routeExternal(packet);
+			try {
+				Vector visitedSubnets = getVisitedSubnets(getVisitedFromPacket(packet));
+				String subnets = "";
+				boolean needRouting = false;
+				for(Iterator i = getIPs().iterator(); i.hasNext();) {
+					String ip = (String)i.next();
+					if(!visitedSubnets.contains(getSubnet(ip))) {
+						needRouting = true;
+						if(subnets.equals("")) {
+							subnets = ip;
+						}
+						else {
+							subnets = subnets + "," + ip;
+						}
+					}
 				}
-			}
-		}
-		
-		/**
-		 * Route the given packet over the network device associated with this server daemon,
-		 * if appropriate.
-		 */
-		public void routeExternal(DatagramPacket packet) {
-			String subnet = getSubnet(getIP());
-			Vector subnets = getVisitedSubnets(getVisitedFromPacket(packet));
-			if(!subnets.contains(subnet)) {
-				String newSubnets = getVisitedFromPacket(packet) + "," + subnet;
-				try {
+				if(needRouting) {
+					String newSubnets = getVisitedFromPacket(packet) + "," + subnets;
 					DatagramPacket sendPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
 					sendPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					sendPacket.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(sendPacket);
 				}
-				catch(IOException exc) {
-					exc.printStackTrace();
-				}
+			}
+			catch(IOException exc) {
+				exc.printStackTrace();
 			}
 		}
 		
