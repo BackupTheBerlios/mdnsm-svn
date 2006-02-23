@@ -210,6 +210,7 @@ public class Client {
 				((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).removeServiceListener("_sserver._udp.*.local.", serverListener);
 				serverChecker.cancel();
 				serverCleaner.stop();
+				reachableServers.clear();
 			}
 			Iterator iterator = ips.iterator();
 			while(iterator.hasNext()) {
@@ -386,6 +387,7 @@ public class Client {
 		 * Server has been stopped, remove from reachable server list.
 		 */
 		public void serviceRemoved(ServiceEvent event) {
+			System.out.println("server removed");
 			ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
 			removeServer(info);
 		}

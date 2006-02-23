@@ -957,7 +957,7 @@ public class JmDNS
         // We do not want to block the entire DNS while we are updating the record for each listener (service info)
         List listenerList = null;
         try {
-        	Thread.sleep(1);  // TODO: for testing on slow computers only, SHOULD NOT BE HERE
+        	Thread.sleep(2);  // TODO: for testing on slow computers only, SHOULD NOT BE HERE
         }
         catch(InterruptedException exc) {
         	
