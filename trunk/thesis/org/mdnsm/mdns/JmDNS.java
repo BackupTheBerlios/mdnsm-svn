@@ -1183,7 +1183,6 @@ public class JmDNS
      */
     private void send(DNSOutgoing out) throws IOException
     {
-    	System.out.println(Utils.getTime() + " sending message");
         out.finish();
         if (!out.isEmpty())
         {
@@ -1235,7 +1234,6 @@ public class JmDNS
                         {
                             if (msg.isQuery())
                             {
-                            	System.out.println(Utils.getTime() + " query");
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
