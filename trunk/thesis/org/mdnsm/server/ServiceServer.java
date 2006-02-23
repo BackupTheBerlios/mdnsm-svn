@@ -235,7 +235,7 @@ public class ServiceServer {
 	private class ServerChecker extends TimerTask {
 		
 		public void start() {
-			timer.schedule(this, Utils.SERVER_CHECK_INTERVAL, Utils.SERVER_CHECK_INTERVAL);
+			timer.schedule(this, Utils.SERVER_CLEAN_INTERVAL);
 		}
 		
 		public void run() {
