@@ -16,11 +16,6 @@ import java.net.*;
  */
 public class Client {
 	
-	// TODO: correcte waarden
-	private final int SERVER_RR_TTL = 30000;
-	private final int SERVER_ANN_INTERVAL = 25000;
-	private final int SERVER_CLEAN_INTERVAL = 10000;
-	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss;
 	// Server instances associated with this client
@@ -544,9 +539,9 @@ public class Client {
 		public void run() {
 			RUNNING = true;
 			ServerAnnouncer announcer = new ServerAnnouncer();
-			timer.schedule(announcer, 0, SERVER_ANN_INTERVAL);
+			timer.schedule(announcer, 0, Utils.SERVER_ANN_INTERVAL);
 			SSCacheCleaner cleaner = new SSCacheCleaner();
-			timer.schedule(cleaner, 0, SERVER_CLEAN_INTERVAL);
+			timer.schedule(cleaner, 0, Utils.SERVER_CLEAN_INTERVAL);
 			while(RUNNING) {
 				try {
 					DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
@@ -675,7 +670,7 @@ public class Client {
 			// Get the numbers required to calculate the byte array length
 			int ipLength = ip.length();
 			int visitedLength = visited.length();
-			byte[] rr = (new ResourceRecord(ip, Utils.NS, 1, SERVER_RR_TTL, new byte[0])).getRR();
+			byte[] rr = (new ResourceRecord(ip, Utils.NS, 1, Utils.SERVER_RR_TTL, new byte[0])).getRR();
 			byte[] vb = visited.getBytes();
 			// Construct the byte array
 			byte[] bytes = new byte[ipLength+visitedLength+rr.length+vb.length];
@@ -703,7 +698,7 @@ public class Client {
 			System.arraycopy(bytes, 4, ipBytes, 0, ipLength);
 			String newIP = new String(ipBytes);
 			// Construct resource record and return it
-			return new ResourceRecord(newIP, Utils.NS, 1, SERVER_RR_TTL, null);
+			return new ResourceRecord(newIP, Utils.NS, 1, Utils.SERVER_RR_TTL, null);
 		}
 		
 		/**

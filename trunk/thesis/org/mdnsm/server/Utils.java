@@ -23,6 +23,9 @@ public class Utils {
 	// Port for interserver communication
 	public static final int SERVER_SERVER_COMM = 1340;
 	
+	public static final int SERVER_RR_TTL = 30000;
+	public static final int SERVER_ANN_INTERVAL = 25000;
+	
 	public static final String SERVER_MULTICAST_GROUP = "224.0.0.251";
 	
 	public static final int SERVER_TTL = 30;
