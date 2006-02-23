@@ -40,6 +40,8 @@ public class ServiceServer {
 	private DatagramSocket clientSocket;
 	private DatagramSocket serverSocket;
 	
+	private ServerChecker serverChecker;
+	
 	private Hashtable typeRequesters; // TODO: time-outs
 	
 	/**
@@ -68,7 +70,7 @@ public class ServiceServer {
 			exc.printStackTrace();
 		}
 		
-		System.out.println("Service server started for "+hostAddress+".");
+		System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t server started");
 		
 		// Start listening for new service types on the local subnet
 		try {
@@ -83,6 +85,10 @@ public class ServiceServer {
 		(new Thread(clientListener)).start();
 		// Start listening to queries and answers from other servers
 		(new Thread(serverListener)).start();
+		
+		// Start searching for servers on the subnet actively
+		// (workaround around different ttl's)
+		(new Thread(serverChecker)).start();
 	}
 	
 	/**
@@ -107,6 +113,7 @@ public class ServiceServer {
 		}
 		clientListener = new ClientListener();
 		serverListener = new ServerListener();
+		serverChecker = new ServerChecker();
 		typeRequesters = new Hashtable();
 	}
 	
@@ -128,13 +135,10 @@ public class ServiceServer {
 				//synchronized(typesDiscovered) {
 					typesDiscovered.add(event.getType());
 				//}
-				System.out.println("ServiceServer.serviceTypeAdded ("+hostAddress+"): " + event.getType());
+				System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t service type added :\t" + event.getType());
 				SListener l = new SListener(event.getType());
 				serviceListeners.add(l);
 				jmdns.addServiceListener(event.getType(), l);
-			}
-			else {
-				System.out.println("ServiceServer.serviceTypeAdded ("+hostAddress+"): service type exists: " + event.getType());
 			}
 		}
 		
@@ -158,7 +162,7 @@ public class ServiceServer {
 		 */
 		public void serviceAdded(ServiceEvent event) {
 			client.getServerCache().add(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+event.getType()));
-			System.out.println("ServiceServer.serviceAdded (@ "+hostAddress+"): " + event.getName() + "." + event.getType());
+			System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t service added :\t" + event.getName() + "." + event.getType());
 			new ServiceResolver(event).start();
 		}
 		
@@ -209,7 +213,7 @@ public class ServiceServer {
 			while(left && entry != null) {
 				left = client.getServerCache().remove(entry);
 			}
-			System.out.println("ServiceServer.serviceRemoved (@ "+hostAddress+"): " + event.getType());
+			System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t service removed :\t" + event.getName() + "." + event.getType());
 		}
 		
 		/**
@@ -218,7 +222,24 @@ public class ServiceServer {
 		public void serviceResolved(ServiceEvent event) {
 			client.getServerCache().add(new DNSRecord.Service(event.getInfo().getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, event.getInfo().getPriority(), event.getInfo().getWeight(), event.getInfo().getPort(), jmdns.getLocalHost().getName()));
 			client.getServerCache().add(new DNSRecord.Text(event.getInfo().getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, infoTtl, event.getInfo().getTextBytes()));
-			System.out.println("ServiceServer.serviceResolved (@ "+hostAddress+"): " + event.getType() + " at " + event.getInfo().getHostAddress() + ":" + event.getInfo().getPort() + " offering \"" + event.getInfo().getTextString() + "\"");
+			System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t service resolved :\t" + event.getName() + "." + event.getType());
+		}
+		
+	}
+	
+	/**
+	 * Timertask polling the network for available servers.
+	 * 
+	 * @author	Frederic Cremer
+	 */
+	private class ServerChecker extends TimerTask {
+		
+		public void start() {
+			timer.schedule(this, Utils.SERVER_CHECK_INTERVAL, Utils.SERVER_CHECK_INTERVAL);
+		}
+		
+		public void run() {
+			jmdns.requestServices("_sserver._udp.*.local.");
 		}
 		
 	}
@@ -496,6 +517,8 @@ public class ServiceServer {
 		clientSocket.close();
 		serverListener.stop();
 		serverSocket.close();
+		
+		serverChecker.cancel();
 		
 		jmdns.unregisterService(serviceInfo);
 		jmdns.removeServiceTypeListener(serviceTypeListener);
