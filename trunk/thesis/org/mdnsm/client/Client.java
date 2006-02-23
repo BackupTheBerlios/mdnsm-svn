@@ -17,9 +17,9 @@ import java.net.*;
 public class Client {
 	
 	// TODO: correcte waarden
-	private final int SERVER_RR_TTL = 360000;
-	private final int SERVER_ANN_INTERVAL = 300000;
-	private final int SERVER_CLEAN_INTERVAL = 300000;
+	private final int SERVER_RR_TTL = 30000;
+	private final int SERVER_ANN_INTERVAL = 25000;
+	private final int SERVER_CLEAN_INTERVAL = 10000;
 	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss;
@@ -551,6 +551,7 @@ public class Client {
 				try {
 					DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
 					sdSocket.receive(packet);
+					System.out.println("server " + packet.getAddress() + " announced");
 					ssCache.addServer(getRRFromPacket(packet));
 					route(packet);
 				}
