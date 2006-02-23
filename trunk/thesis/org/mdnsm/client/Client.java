@@ -629,10 +629,10 @@ public class Client {
 					if(!visitedSubnets.contains(getSubnet(ip))) {
 						needRouting = true;
 						if(subnets.equals("")) {
-							subnets = ip;
+							subnets = getSubnet(ip);
 						}
 						else {
-							subnets = subnets + "," + ip;
+							subnets = subnets + "," + getSubnet(ip);
 						}
 					}
 				}
