@@ -1183,6 +1183,7 @@ public class JmDNS
      */
     private void send(DNSOutgoing out) throws IOException
     {
+    	System.out.println(Utils.getTime() + " sending message");
         out.finish();
         if (!out.isEmpty())
         {
