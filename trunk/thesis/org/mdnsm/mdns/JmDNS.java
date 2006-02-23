@@ -918,7 +918,6 @@ public class JmDNS
         // add the new listener
         synchronized (this)
         {
-        	System.out.println("adding listener for " + question.getName() + " " + question.getType());
             listeners.add(listener);
         }
 
@@ -1235,7 +1234,7 @@ public class JmDNS
                         {
                             if (msg.isQuery())
                             {
-                            	//System.out.println(Utils.getTime() + " query");
+                            	System.out.println(Utils.getTime() + " query");
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
