@@ -88,7 +88,7 @@ public class ServiceServer {
 		
 		// Start searching for servers on the subnet actively
 		// (workaround around different ttl's)
-		(new Thread(serverChecker)).start();
+		serverChecker.start();
 	}
 	
 	/**
@@ -239,6 +239,7 @@ public class ServiceServer {
 		}
 		
 		public void run() {
+			System.out.println(Utils.getTime() + " requesting server info");
 			jmdns.requestServices("_sserver._udp.*.local.");
 		}
 		
