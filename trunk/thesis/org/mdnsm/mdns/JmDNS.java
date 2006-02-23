@@ -1045,7 +1045,7 @@ public class JmDNS
                 else
                 {
                     c.resetTTL(rec);
-                    System.out.println("refreshing cache entry: " + rec.getName());
+                    //System.out.println("refreshing cache entry: " + rec.getName());
                     if(rec.getName().indexOf("_sserver._udp") >= 0) {
                     	List list = (List)serviceListeners.get("_sserver._udp.*.local.");
                     	if(list != null) {
@@ -1064,7 +1064,7 @@ public class JmDNS
             {
                 if (!expired)
                 {
-                	System.out.println("new cache entry: " + rec.getName());
+                	//System.out.println("new cache entry: " + rec.getName());
                     isInformative = true;
                     cache.add(rec);
                 }
@@ -1235,7 +1235,7 @@ public class JmDNS
                         {
                             if (msg.isQuery())
                             {
-                            	System.out.println(Utils.getTime() + " query");
+                            	//System.out.println(Utils.getTime() + " query");
                                 if (packet.getPort() != DNSConstants.MDNS_PORT)
                                 {
                                     handleQuery(msg, packet.getAddress(), packet.getPort());
