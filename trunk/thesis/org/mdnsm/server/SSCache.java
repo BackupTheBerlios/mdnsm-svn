@@ -111,4 +111,14 @@ public class SSCache {
 		
 	}
 	
+	public String toString() {
+		String result = 	"service server cache\n";
+		result += 			"--------------------\n";
+		for(Iterator i = elements.iterator(); i.hasNext();) {
+			SSElement e = (SSElement)i.next();
+			result += "* " + e.getRR().getDomain() + "\n"; 
+		}
+		return result;
+	}
+	
 }

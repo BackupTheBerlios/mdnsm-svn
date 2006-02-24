@@ -546,7 +546,6 @@ public class Client {
 				try {
 					DatagramPacket packet = new DatagramPacket(new byte[1000], 1000);
 					sdSocket.receive(packet);
-					System.out.println("@"+getIP()+" server " + packet.getAddress().getHostAddress() + " announced");
 					ssCache.addServer(getRRFromPacket(packet));
 					route(packet);
 				}
@@ -586,6 +585,7 @@ public class Client {
 					packet.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(packet);
 					route(packet);
+					System.out.println(ssCache.toString());
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();
@@ -625,6 +625,7 @@ public class Client {
 		 * if appropriate.
 		 */
 		public void routeExternal(DatagramPacket packet) {
+			ssCache.addServer(getRRFromPacket(packet));
 			String subnet = getSubnet(getIP());
 			Vector subnets = getVisitedSubnets(getVisitedFromPacket(packet));
 			if(!subnets.contains(subnet)) {
@@ -633,7 +634,6 @@ public class Client {
 					DatagramPacket sdPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
 					sdPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					sdPacket.setPort(Utils.DAEMON_PORT);
-					System.out.println("@"+getIP()+" server " + packet.getAddress().getHostAddress() + " routed");
 					sdSocket.send(sdPacket);
 				}
 				catch(IOException exc) {
