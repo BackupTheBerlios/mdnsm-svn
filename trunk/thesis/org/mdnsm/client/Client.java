@@ -630,7 +630,10 @@ public class Client {
 			if(!subnets.contains(subnet)) {
 				String newSubnets = getVisitedFromPacket(packet) + "," + subnet;
 				try {
-					sdSocket.send(constructPacket(getRRFromPacket(packet).getDomain(), newSubnets));
+					DatagramPacket sdPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
+					sdPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+					sdPacket.setPort(Utils.DAEMON_PORT);
+					sdSocket.send(sdPacket);
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();
