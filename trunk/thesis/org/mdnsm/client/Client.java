@@ -633,6 +633,7 @@ public class Client {
 					DatagramPacket sdPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
 					sdPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					sdPacket.setPort(Utils.DAEMON_PORT);
+					System.out.println("@"+getIP()+" server " + packet.getAddress().getHostAddress() + " routed");
 					sdSocket.send(sdPacket);
 				}
 				catch(IOException exc) {
