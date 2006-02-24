@@ -585,7 +585,6 @@ public class Client {
 					packet.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(packet);
 					route(packet);
-					System.out.println(ssCache.toString());
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();
