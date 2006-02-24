@@ -581,20 +581,11 @@ public class Client {
 			
 			public void run() {
 				try {
-					String subnets = "";
-					for(Iterator i = getIPs().iterator(); i.hasNext();) {
-						if(subnets.equals("")) {
-							subnets = getSubnet((String)i.next());
-						}
-						else {
-							subnets = subnets + "," + getSubnet((String)i.next());
-						}
-					}
-					DatagramPacket packet = constructPacket(getIP(), subnets);
+					DatagramPacket packet = constructPacket(getIP(), getSubnet(getIP()));
 					packet.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
 					packet.setPort(Utils.DAEMON_PORT);
 					sdSocket.send(packet);
-					//route(packet);
+					route(packet);
 				}
 				catch(IOException exc) {
 					exc.printStackTrace();
@@ -620,34 +611,109 @@ public class Client {
 		 * Route the given packet to other local servers.
 		 */
 		private void route(DatagramPacket packet) {
-			try {
-				Vector visitedSubnets = getVisitedSubnets(getVisitedFromPacket(packet));
-				String subnets = "";
-				boolean needRouting = false;
-				for(Iterator i = getIPs().iterator(); i.hasNext();) {
-					String ip = (String)i.next();
-					if(!visitedSubnets.contains(getSubnet(ip))) {
-						needRouting = true;
-						if(subnets.equals("")) {
-							subnets = getSubnet(ip);
-						}
-						else {
-							subnets = subnets + "," + getSubnet(ip);
-						}
-					}
+			Enumeration e = serverDaemons.elements();
+			while(e.hasMoreElements()) {
+				ServerDaemon s = (ServerDaemon)e.nextElement();
+				if(!s.getIP().equals(getIP())) {
+					s.routeExternal(packet);
 				}
-				if(needRouting) {
-					String newSubnets = getVisitedFromPacket(packet) + "," + subnets;
-					DatagramPacket sendPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
-					sendPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
-					sendPacket.setPort(Utils.DAEMON_PORT);
-					sdSocket.send(sendPacket);
-				}
-			}
-			catch(IOException exc) {
-				exc.printStackTrace();
 			}
 		}
+		
+		/**
+		 * Route the given packet over the network device associated with this server daemon,
+		 * if appropriate.
+		 */
+		public void routeExternal(DatagramPacket packet) {
+			String subnet = getSubnet(getIP());
+			Vector subnets = getVisitedSubnets(getVisitedFromPacket(packet));
+			if(!subnets.contains(subnet)) {
+				String newSubnets = getVisitedFromPacket(packet) + "," + subnet;
+				try {
+					sdSocket.send(constructPacket(getRRFromPacket(packet).getDomain(), newSubnets));
+				}
+				catch(IOException exc) {
+					exc.printStackTrace();
+				}
+			}
+		}
+		
+//		/**
+//		 * Timertask handling announcing the associated server.
+//		 * 
+//		 * @author	Frederic Cremer
+//		 */
+//		private class ServerAnnouncer extends TimerTask {
+//			
+//			public void run() {
+//				try {
+//					String subnets = "";
+//					for(Iterator i = getIPs().iterator(); i.hasNext();) {
+//						if(subnets.equals("")) {
+//							subnets = getSubnet((String)i.next());
+//						}
+//						else {
+//							subnets = subnets + "," + getSubnet((String)i.next());
+//						}
+//					}
+//					DatagramPacket packet = constructPacket(getIP(), subnets);
+//					packet.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+//					packet.setPort(Utils.DAEMON_PORT);
+//					sdSocket.send(packet);
+//					//route(packet);
+//				}
+//				catch(IOException exc) {
+//					exc.printStackTrace();
+//				}
+//			}
+//			
+//		}
+//		
+//		/**
+//		 * Timertask handling the periodic cleaning of the service server cache.
+//		 * 
+//		 * @author	Frederic Cremer
+//		 */
+//		private class SSCacheCleaner extends TimerTask {
+//			
+//			public void run() {
+//				ssCache.clean();
+//			}
+//			
+//		}
+//		
+//		/**
+//		 * Route the given packet to other local servers.
+//		 */
+//		private void route(DatagramPacket packet) {
+//			try {
+//				Vector visitedSubnets = getVisitedSubnets(getVisitedFromPacket(packet));
+//				String subnets = "";
+//				boolean needRouting = false;
+//				for(Iterator i = getIPs().iterator(); i.hasNext();) {
+//					String ip = (String)i.next();
+//					if(!visitedSubnets.contains(getSubnet(ip))) {
+//						needRouting = true;
+//						if(subnets.equals("")) {
+//							subnets = getSubnet(ip);
+//						}
+//						else {
+//							subnets = subnets + "," + getSubnet(ip);
+//						}
+//					}
+//				}
+//				if(needRouting) {
+//					String newSubnets = getVisitedFromPacket(packet) + "," + subnets;
+//					DatagramPacket sendPacket = constructPacket(getRRFromPacket(packet).getDomain(), newSubnets);
+//					sendPacket.setAddress(InetAddress.getByName(Utils.SERVER_MULTICAST_GROUP));
+//					sendPacket.setPort(Utils.DAEMON_PORT);
+//					sdSocket.send(sendPacket);
+//				}
+//			}
+//			catch(IOException exc) {
+//				exc.printStackTrace();
+//			}
+//		}
 		
 		/**
 		 * Get a vector of subnet strings from one comma-separated list of IPs.
