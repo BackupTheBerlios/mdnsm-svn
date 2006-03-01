@@ -1,5 +1,7 @@
 package org.mdnsm.server;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.util.*;
 
@@ -368,6 +370,72 @@ public class Utils {
         System.out.println (reverse ("1234"));
     }
     
+	
+	/**
+	 * Get the available IPs of this computer.
+	 */
+	public static Vector getIPs() throws IOException {
+		if(System.getProperty("os.name").equals("Windows XP")) {
+			return getWindowsIPConfiguration();
+		}
+		else if(System.getProperty("os.name").equals("Linux")){
+			return getLinuxIPConfiguration();
+		}
+		else throw new IllegalArgumentException("Sorry, your OS is not supported by mDNSm.");
+	}
+	
+	/**
+	 * Get the available IPs if this computer runs Windows XP.
+	 */
+	private static Vector getWindowsIPConfiguration() throws IOException {
+		Vector result = new Vector();
+		Process process = Runtime.getRuntime().exec("ipconfig");
+		BufferedInputStream is = new BufferedInputStream(process.getInputStream());
+		String output = "";
+		int c = is.read();
+		while(c != -1) {
+			if(output.endsWith("IP Address. . . . . . . . . . . . : ")) {
+				String ip = "";
+				while(Character.isDigit((char)c) || (char)c == '.') {
+					ip += (char)c;
+					c = is.read();
+				}
+				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
+					result.add(ip);
+				}
+			}
+			output += (char) c;
+			c = is.read();
+		}
+		return result;
+	}
+	
+	/**
+	 * Get the available IPs if this computer runs a Linux OS.
+	 */
+	private static Vector getLinuxIPConfiguration() throws IOException {
+		Vector result = new Vector();
+		Process process = Runtime.getRuntime().exec("/sbin/ifconfig");
+		BufferedInputStream is = new BufferedInputStream(process.getInputStream());
+		String output = "";
+		int c = is.read();
+		while(c != -1) {
+			if(output.endsWith("inet addr:")) {
+				String ip = "";
+				while(Character.isDigit((char)c) || (char)c == '.') {
+					ip += (char)c;
+					c = is.read();
+				}
+				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
+					result.add(ip);
+				}
+			}
+			output += (char) c;
+			c = is.read();
+		}
+		return result;
+	}
+    
     /**
      * Get the IP out of a fully qualified type.
      */
@@ -378,7 +446,7 @@ public class Utils {
     		tokens.add(tok.nextToken());
     	}
     	int index = tokens.indexOf("local");
-    	return (String)tokens.get(index-4) + (String)tokens.get(index-3) + (String)tokens.get(index-2) + (String)tokens.get(index-1);
+    	return (String)tokens.get(index-4) + "." + (String)tokens.get(index-3) + "." + (String)tokens.get(index-2) + "." + (String)tokens.get(index-1);
     }
     
     public static String getTime() {

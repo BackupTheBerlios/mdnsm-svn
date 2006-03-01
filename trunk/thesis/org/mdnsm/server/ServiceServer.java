@@ -161,7 +161,7 @@ public class ServiceServer {
 		 * A new service is discovered and added to the server's cache.
 		 */
 		public void serviceAdded(ServiceEvent event) {
-			client.getServerCache().add(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+event.getType()));
+			client.getServerCache().add(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+"."+event.getType()));
 			System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t service added :\t" + event.getName() + "." + event.getType());
 			new ServiceResolver(event).start();
 		}
@@ -239,7 +239,6 @@ public class ServiceServer {
 		}
 		
 		public void run() {
-			System.out.println(Utils.getTime() + " requesting server info");
 			jmdns.requestServices("_sserver._udp.*.local.");
 		}
 		
@@ -294,7 +293,7 @@ public class ServiceServer {
                     	// We don't really expect answers here
                     	if(msg.isQuery()) {
                     		for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
-                    			DNSRecord q = (DNSRecord)i.next();
+                    			DNSQuestion q = (DNSQuestion)i.next();
                     			
                     			// Type query
                     			if(q.getType() == DNSConstants.TYPE_PTR) {
@@ -356,9 +355,9 @@ public class ServiceServer {
 	private Vector searchServicesByType(String type) {
 		Vector result = new Vector();
 		for(Iterator i = client.getServerCache().iterator(); i.hasNext();) {
-			for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n.next()) {
+			for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n = n.next()) {
 				 DNSEntry entry = n.getValue();
-				 if(entry.getType() == DNSConstants.TYPE_PTR && JmDNS.convertToType(entry.getName()).equals(type)) {
+				 if(entry.getType() == DNSConstants.TYPE_PTR && JmDNS.convertToType(entry.getName()).equals(type) && !result.contains(entry)) {
 					 result.add(entry);
 				 }
 			}
@@ -397,8 +396,10 @@ public class ServiceServer {
 			if(!out.isEmpty()) {
 				for(Iterator i = client.getSSCache().iterator(); i.hasNext();) {
 					SSCache.SSElement e = (SSCache.SSElement)i.next();
-					DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(e.getRR().getDomain()), Utils.SERVER_SERVER_COMM);
-					serverSocket.send(packet);
+					if(!e.getRR().getDomain().equals(getHostAddress())) {
+						DatagramPacket packet = new DatagramPacket(out.getData(), out.getOff(), InetAddress.getByName(e.getRR().getDomain()), Utils.SERVER_SERVER_COMM);
+						serverSocket.send(packet);
+					}
 				}
 			}
 		}
@@ -428,10 +429,11 @@ public class ServiceServer {
                 		
                 		// Incoming query
                 		if(msg.isQuery()) {
+                			System.out.println("server query van " + packet.getAddress().getHostAddress());
                 			DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
                 			String sender = packet.getAddress().getHostAddress();
                 			for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
-                    			DNSRecord q = (DNSRecord)i.next();
+                    			DNSQuestion q = (DNSQuestion)i.next();
                     			
                     			// Type query
                     			if(q.getType() == DNSConstants.TYPE_PTR) {
@@ -450,6 +452,7 @@ public class ServiceServer {
                 		}
                 		
                 		else if(msg.isResponse()) {
+                			System.out.println("server response van " + packet.getAddress().getHostAddress());
                 			DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
                 			String type = "";
                 			for(Iterator i = msg.getAnswers().iterator(); i.hasNext();) {

@@ -16,6 +16,8 @@ import java.net.*;
  */
 public class Client {
 	
+	private Vector ips;
+	
 	// JmDNS instances associated with this client
 	private Hashtable jmdnss;
 	// Server instances associated with this client
@@ -49,8 +51,6 @@ public class Client {
 	// The socket listeners for client communication
 	private Hashtable socketListeners;
 	
-	private String os;
-	
 	public Client() throws IOException {
 		initData();
 		new NICMonitor().start();
@@ -60,6 +60,7 @@ public class Client {
 	 * Initialize this client's data structures.
 	 */
 	private void initData() {
+		ips = new Vector();
 		jmdnss = new Hashtable();
 		servers = new Hashtable();
 		serverCache = new DNSCache(100);
@@ -79,22 +80,30 @@ public class Client {
 	 * Register a service running on this computer.
 	 */
 	public void registerService(ServiceInfo info) {
-		for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
-			try {
-				((JmDNS)i.next()).registerService(info);
+		try {
+			for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
+				((JmDNS)i.next()).registerService(info, true);
 			}
-			catch(IOException exc) {
-				exc.printStackTrace();
-			}
+		}
+		catch(IOException exc) {
+			exc.printStackTrace();
 		}
 	}
 	
 	/**
 	 * Unregister a service running on this computer.
+	 * If the current primary IP has changed from the IP with which the service
+	 * is registered, this has no result.  This does no harm, as the JmDNS instance
+	 * registering the service has been stopped, unregistering all of its services.
 	 */
 	public void unregisterService(ServiceInfo info) {
-		for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
-			((JmDNS)i.next()).unregisterService(info);
+		try {
+			for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
+					((JmDNS)i.next()).unregisterService(info, true);
+			}
+		}
+		catch(IOException exc) {
+			exc.printStackTrace();
 		}
 	}
 	
@@ -131,17 +140,13 @@ public class Client {
 		
 		private final long MONITOR_INTERVAL = 1000;  // TODO: interval correct instellen
 		
-		public NICMonitor() {
-			os = System.getProperty("os.name");
-		}
-		
 		public void start() {
 			timer.schedule(this, 0, MONITOR_INTERVAL);
 		}
 		
 		public void run() {
 			try {
-				Vector ips = getIPs();
+				Vector ips = Utils.getIPs();
 				removeServers(ips);
 				checkServerNeed(ips);
 			}
@@ -187,7 +192,7 @@ public class Client {
 				serverCleaner.start();
 				DatagramSocket socket = new DatagramSocket(Utils.CLIENT_COM, InetAddress.getByName(ip));
 				sockets.put(ip, socket);
-				SocketListener listener = new SocketListener(socket);
+				SocketListener listener = new SocketListener(socket, ip);
 				socketListeners.put(ip, listener);
 				(new Thread(listener)).start();
 			}
@@ -195,8 +200,6 @@ public class Client {
 				System.out.println("Client.NICMonitor.checkServerNeeded: I/O exception occurred when trying to initialize JmDNS instance: " + exc.getMessage());
 			}
 		}
-		
-		// TODO: juiste TTL-waarden voor server-records
 		
 		// Multiple IPs detected
 		else if(ips.size() > 1) {
@@ -238,7 +241,7 @@ public class Client {
 					try {
 						DatagramSocket socket = new DatagramSocket(Utils.CLIENT_COM, InetAddress.getByName(ip));
 						sockets.put(ip, socket);
-						SocketListener listener = new SocketListener(socket);
+						SocketListener listener = new SocketListener(socket, ip);
 						socketListeners.put(ip, listener);
 						(new Thread(listener)).start();
 					}
@@ -289,72 +292,7 @@ public class Client {
 			}
 		}
 	}
-	
-	/**
-	 * Get the available IPs of this computer.
-	 */
-	private Vector getIPs() throws IOException {
-		if(os.equals("Windows XP")) {
-			return getWindowsIPConfiguration();
-		}
-		else if(os.equals("Linux")){
-			return getLinuxIPConfiguration();
-		}
-		else throw new IllegalArgumentException("Sorry, your OS is not supported by mDNSm.");
-	}
-	
-	/**
-	 * Get the available IPs if this computer runs Windows XP.
-	 */
-	private Vector getWindowsIPConfiguration() throws IOException {
-		Vector result = new Vector();
-		Process process = Runtime.getRuntime().exec("ipconfig");
-		BufferedInputStream is = new BufferedInputStream(process.getInputStream());
-		String output = "";
-		int c = is.read();
-		while(c != -1) {
-			if(output.endsWith("IP Address. . . . . . . . . . . . : ")) {
-				String ip = "";
-				while(Character.isDigit((char)c) || (char)c == '.') {
-					ip += (char)c;
-					c = is.read();
-				}
-				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
-					result.add(ip);
-				}
-			}
-			output += (char) c;
-			c = is.read();
-		}
-		return result;
-	}
-	
-	/**
-	 * Get the available IPs if this computer runs a Linux OS.
-	 */
-	private Vector getLinuxIPConfiguration() throws IOException {
-		Vector result = new Vector();
-		Process process = Runtime.getRuntime().exec("/sbin/ifconfig");
-		BufferedInputStream is = new BufferedInputStream(process.getInputStream());
-		String output = "";
-		int c = is.read();
-		while(c != -1) {
-			if(output.endsWith("inet addr:")) {
-				String ip = "";
-				while(Character.isDigit((char)c) || (char)c == '.') {
-					ip += (char)c;
-					c = is.read();
-				}
-				if(!ip.equals("127.0.0.1") && !ip.equals("0.0.0.0") && !ip.startsWith("169.")) {
-					result.add(ip);
-				}
-			}
-			output += (char) c;
-			c = is.read();
-		}
-		return result;
-	}
-	
+
 	/*
 	 * Listening to usable servers
 	 */
@@ -736,7 +674,7 @@ public class Client {
 			vector.add(listener);
 			infoListeners.put(type, vector);
 		}
-		(new Thread(new ServiceResolver(type))).start();
+		(new ServiceResolver(type)).start();
 	}
 	
 	/**
@@ -755,7 +693,7 @@ public class Client {
         public ServiceResolver(String type) {
             this.type = type;
         }
-
+        
         public void start() {
             timer.schedule(this, DNSConstants.QUERY_WAIT_INTERVAL, DNSConstants.QUERY_WAIT_INTERVAL);
         }
@@ -765,20 +703,19 @@ public class Client {
             	long now = System.currentTimeMillis();
             	DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_QUERY);
             	out.addQuestion(new DNSQuestion(type, DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN));
-            	// This should only be executed when there is only one JmDNS instance running locally
-            	// so we should be able to safely add the registered services of that instance as known
-            	// answers
-            	Map services = (Map)((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement())).getServices();
-            	for (Iterator s = services.values().iterator(); s.hasNext();)
-            	{
-            		final ServiceInfo info = (ServiceInfo) s.next();
-            		try
-            		{
-            			out.addAnswer(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()), now);
-            		}
-            		catch (IOException ee)
-            		{
-            			break;
+            	// There is only one NIC locally, add known answers
+            	// (for we really have to send this message to an external
+            	//  server).
+            	if(jmdnss.values().size() == 1) {
+            		Map services = ((JmDNS)jmdnss.values().iterator().next()).getServices();
+            		for (Iterator s = services.values().iterator(); s.hasNext();) {
+            			ServiceInfo info = (ServiceInfo) s.next();
+            			try {
+            				out.addAnswer(new DNSRecord.Pointer(info.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getQualifiedName()), now);
+            			}
+            			catch (IOException ee) {
+            				break;
+            			}
             		}
             	}
             	sendToServers(out);
@@ -786,6 +723,7 @@ public class Client {
             catch (IOException exc) {
             	exc.printStackTrace();
             }
+            cancel();
         }
     }
 	
@@ -823,6 +761,7 @@ public class Client {
             catch(IOException exc) {
             	exc.printStackTrace();
             }
+            cancel();
         }
     }
     
@@ -892,10 +831,12 @@ public class Client {
     class SocketListener implements Runnable {
         
     	private DatagramSocket socket;
+    	private String ip;
     	private boolean needed = true;
     	
-    	public SocketListener(DatagramSocket socket) {
+    	public SocketListener(DatagramSocket socket, String ip) {
     		this.socket = socket;
+    		this.ip = ip;
     	}
     	
     	public void run() {
@@ -914,14 +855,14 @@ public class Client {
                     		String sender = packet.getAddress().getHostAddress();
                     		DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
                     		for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
-                    			DNSRecord q = (DNSRecord)i.next();
+                    			DNSQuestion q = (DNSQuestion)i.next();
                     			if(q.getType() == DNSConstants.TYPE_SRV) {
-                    				ServiceInfo info = ((JmDNS)jmdnss.values().iterator().next()).getServiceInfo(q.getName());
+                    				ServiceInfo info = ((JmDNS)jmdnss.get(ip)).getServiceInfo(q.getName());
                     				out.addAnswer(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()), System.currentTimeMillis());
                     			}
                     			else if(q.getType() == DNSConstants.TYPE_TXT) {
-                    				ServiceInfo info = ((JmDNS)jmdnss.values().iterator().next()).getServiceInfo(q.getName());
-                    				out.addAnswer(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()), System.currentTimeMillis());
+                    				ServiceInfo info = ((JmDNS)jmdnss.get(ip)).getServiceInfo(q.getName());
+                    				out.addAnswer(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()), System.currentTimeMillis());
                     			}
                     		}
                     		send(out, sender);
@@ -960,31 +901,36 @@ public class Client {
     	long now = System.currentTimeMillis();
     	for (Iterator i = msg.getAnswers().iterator(); i.hasNext();){
     		DNSRecord rec = (DNSRecord) i.next();
-    		boolean expired = rec.isExpired(now);
     		ServiceInfo info = null;
-    		String type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
+    		String type = null;
     		switch (rec.getType()) {
     			case DNSConstants.TYPE_PTR:
+    				//System.out.println("pointer to " + rec.getName());
+    				type = JmDNS.convertToType(rec.getName());
     				info = new ServiceInfo(rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()));
     				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
     					ServiceListener l = (ServiceListener)j.next();
-    					l.serviceAdded(new ServiceEvent(null, JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), null));
+    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()), null));
     				}
     				
     				(new ServiceInfoResolver(info)).start();
     				break;
     			case DNSConstants.TYPE_SRV:
+    				//System.out.println("srv to " + rec.getName());
+    				type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
     				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), ((DNSRecord.Service)rec).port, ((DNSRecord.Service)rec).weight, ((DNSRecord.Service)rec).priority, "");
     				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
     					ServiceListener l = (ServiceListener)j.next();
-    					l.serviceAdded(new ServiceEvent(null, JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
+    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
     				}
     				break;
     			case DNSConstants.TYPE_TXT:
+    				//System.out.println("txt to " + rec.getName());
+    				type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
     				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), 0, 0, 0, ((DNSRecord.Text)rec).text);
     				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
     					ServiceListener l = (ServiceListener)j.next();
-    					l.serviceAdded(new ServiceEvent(null, JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
+    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
     				}
     				break;
     		}

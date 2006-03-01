@@ -610,6 +610,22 @@ public class JmDNS
         }
     }
 
+    public void registerService(ServiceInfo infoTBA, boolean needIP) throws IOException {
+    	ServiceInfo info = new ServiceInfo(infoTBA);
+    	if(needIP) {
+    		String newType = "";
+    		StringTokenizer tok = new StringTokenizer(info.type, ".");
+    		String token = tok.nextToken();
+    		while(!token.equals("*")) {
+    			newType = newType + token + ".";
+    			token = tok.nextToken();
+    		}
+    		newType = newType + ip + ".local.";
+    		info.type = newType;
+    	}
+    	registerService(info);
+    }
+    
     /**
      * Register a service. The service is registered for access by other jmdns clients.
      * The name of the service may be changed to make it unique.
@@ -644,6 +660,21 @@ public class JmDNS
             //empty
         }
         logger.fine("registerService() JmDNS registered service as " + info);
+    }
+    
+    public void unregisterService(ServiceInfo info, boolean needIP) throws IOException {
+    	if(needIP) {
+    		String newType = "";
+    		StringTokenizer tok = new StringTokenizer(info.type, ".");
+    		String token = tok.nextToken();
+    		while(!token.equals("*")) {
+    			newType = newType + token + ".";
+    			token = tok.nextToken();
+    		}
+    		newType = newType + ip + ".local.";
+    		info.type = newType;
+    	}
+    	unregisterService(info);
     }
     
     /**
@@ -957,7 +988,7 @@ public class JmDNS
         // We do not want to block the entire DNS while we are updating the record for each listener (service info)
         List listenerList = null;
         try {
-        	Thread.sleep(2);  // TODO: for testing on slow computers only, SHOULD NOT BE HERE
+        	Thread.sleep(5);  // TODO: for testing on slow computers only, SHOULD NOT BE HERE
         }
         catch(InterruptedException exc) {
         	
