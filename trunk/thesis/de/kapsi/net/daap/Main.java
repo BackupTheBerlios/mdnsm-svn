@@ -25,9 +25,6 @@ import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import javax.jmdns.JmDNS;
-import javax.jmdns.ServiceInfo;
-
 /**
  * Test and Sample environment for DAAP
  * 
@@ -74,10 +71,10 @@ public class Main extends TimerTask implements DaapAuthenticator, DaapStreamSour
 
         System.out.println(SONG);
 
-        JmDNS jmdns = new JmDNS();
-        ServiceInfo serviceInfo = new ServiceInfo("_daap._tcp.local.", LIBRARY
-                + "._daap._tcp.local.", PORT, 0, 0, LIBRARY);
-        jmdns.registerService(serviceInfo);
+        //JmDNS jmdns = new JmDNS();
+        //ServiceInfo serviceInfo = new ServiceInfo("_daap._tcp.local.", LIBRARY
+        //        + "._daap._tcp.local.", PORT, 0, 0, LIBRARY);
+        //jmdns.registerService(serviceInfo);
 
         library = new Library(LIBRARY);
         database = new Database("LimeWireXYZ");
