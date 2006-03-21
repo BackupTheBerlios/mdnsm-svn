@@ -96,9 +96,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import javax.jmdns.JmDNS;
-import javax.jmdns.ServiceInfo;
-import javax.jmdns.ServiceListener;
+//import org.mdnsm.mdns.*;
 import javax.swing.AbstractAction;
 import javax.swing.AbstractCellEditor;
 import javax.swing.Action;
@@ -211,10 +209,10 @@ import ca.odell.glazedlists.swing.TextComponentMatcherEditor;
  * @created
  */
 public class GetItTogether implements ItemListener,
-		MouseWheelListener, ServiceListener, FileListener {
+		MouseWheelListener, FileListener {
 
 	public static final String SEARCHTEXT = "Search: ";
-    public static final String FRAME_TITLE = "Get It Together";
+    public static final String FRAME_TITLE = "mDNSm";
     public static final int RANDOM_OFF = 0;
     public static final int RANDOM_BROWSER = 1;
     public static final int RANDOM_PLAYLIST = 2;
@@ -462,17 +460,16 @@ public class GetItTogether implements ItemListener,
         System.out.println("Show Splash: "+GITProperties.showSplash);
         
         if (GITProperties.showSplash) {
-        JCheckBox cb = new JCheckBox("Don't hang around next time");
-        cb.setForeground(Color.WHITE);
+        	JCheckBox cb = new JCheckBox("Don't hang around next time");
+        	cb.setForeground(Color.WHITE);
             cb.setOpaque(false);
             cb.setSize(cb.getPreferredSize());
             cb.setLocation(0, splash.getHeight() - cb.getHeight() + cb.getInsets().bottom / 2);
-        splash.getLayeredPane().add(cb, new Integer(200));
-        cb.addItemListener(this);
+            splash.getLayeredPane().add(cb, new Integer(200));
+        	cb.addItemListener(this);
         }
                 
-        URL imageURL = GetItTogether.class
-                .getResource("/images/puzzle_super_mini.png");
+        URL imageURL = GetItTogether.class.getResource("/images/puzzle_super_mini.png");
         frame.setIconImage(frame.getToolkit().getImage(imageURL));
         
         //		define all the actions to be used.

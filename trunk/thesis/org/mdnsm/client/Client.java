@@ -26,6 +26,7 @@ public class Client {
 	private DNSCache serverCache;
 	
 	private Timer timer;
+	private NICMonitor nicMonitor;
 	
 	// Listener for usable server information
 	private ServerListener serverListener;
@@ -53,7 +54,8 @@ public class Client {
 	
 	public Client() throws IOException {
 		initData();
-		new NICMonitor().start();
+		nicMonitor = new NICMonitor();
+		nicMonitor.start();
 	}
 	
 	/**
@@ -935,6 +937,49 @@ public class Client {
     				break;
     		}
     	}
+    }
+    
+    /**
+     * Shut down this client.
+     */
+    public void shutdown() {
+    	nicMonitor.cancel();
+    	if(jmdnss.size() == 1) {
+    		JmDNS jmdns = ((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement()));
+    		jmdns.removeServiceListener("_sserver._udp.*.local.", serverListener);
+    		serverChecker.cancel();
+    		serverCleaner.cancel();
+    	}
+    	for(Iterator a = servers.values().iterator(); a.hasNext();) {
+    		((ServiceServer)a.next()).shutdown();
+    	}
+    	servers.clear();
+    	for(Iterator b = serverDaemons.values().iterator(); b.hasNext();) {
+    		((ServerDaemon)b.next()).stop();
+    	}
+    	serverDaemons.clear();
+    	for(Iterator c = socketListeners.values().iterator(); c.hasNext();) {
+    		((SocketListener)c.next()).stop();
+    	}
+    	socketListeners.clear();
+    	for(Iterator d = sockets.values().iterator(); d.hasNext();) {
+    		((DatagramSocket)d.next()).close();
+    	}
+    	sockets.clear();
+    	for(Iterator e = jmdnss.values().iterator(); e.hasNext();) {
+    		((JmDNS)e.next()).close();
+    	}
+    	jmdnss.clear();
+    	for(Iterator f = infoListeners.values().iterator(); f.hasNext();) {
+    		((Vector)f.next()).clear();
+    	}
+    	infoListeners.clear();
+    	
+    	serverCache.clear();
+    	reachableServers.clear();
+    	ssCache.clean();
+    	
+    	timer.cancel();
     }
 		
 }

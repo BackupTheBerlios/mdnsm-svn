@@ -12,7 +12,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import javax.jmdns.ServiceInfo;
+import org.mdnsm.mdns.ServiceInfo;
 import javax.swing.AbstractAction;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -109,7 +109,7 @@ public class DaapHost extends Host {
     }
 
     public void loadServiceInfo(ServiceInfo info) {        
-        address = info.getAddress();
+        address = info.getHostAddress();
         computer_name = info.getServer().replaceFirst(".local.","");
         port = info.getPort();
         String hasPassword = info.getPropertyString("Password"); 
