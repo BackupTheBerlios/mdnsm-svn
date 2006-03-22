@@ -41,7 +41,7 @@ import javax.swing.event.DocumentListener;
 import org.git.client.swing.GetItTogether;
 import org.git.player.AbstractPlayer;
 import org.git.player.PlayerUtils;
-import org.git.server.Server;
+import org.git.server.MusicServer;
 
 /**
  * @author wooo
@@ -397,7 +397,7 @@ public class GITPropertiesPanel extends JPanel implements ActionListener {
         dl.setMargin(new Insets(0, 1, 0, 1));
         dl.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent evt) {
-                Server.instance().update();
+                MusicServer.instance().update();
             }
         });
         dl.setToolTipText("Updates the server's information, reflecting any changes you have made.");
@@ -441,13 +441,13 @@ public class GITPropertiesPanel extends JPanel implements ActionListener {
                 if (!j.isSelected())
                 {
                     enableAllChildren(server, false);
-                    Server.instance().stop();
+                    MusicServer.instance().stop();
                 }
                 else
                 {
                     enableAllChildren(server, true);
                     enableAllChildren(pw_field, GITProperties.sharePasswordRequired);
-                    Server.instance().start();
+                    MusicServer.instance().start();
                 }
                 } catch (Exception ex) {ex.printStackTrace();}
             }

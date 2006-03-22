@@ -187,7 +187,7 @@ import org.git.player.PlayerException;
 import org.git.player.PlayerUtils;
 import org.git.player.QTPlayer;
 import org.git.server.RendezvousManager;
-import org.git.server.Server;
+import org.git.server.MusicServer;
 
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.io.CachingList;
@@ -328,7 +328,7 @@ public class GetItTogether implements ItemListener,
     private JLabel helpLabel;
     protected TimerTask tableTimerTask;
     public static IPodHost iPodHost;
-    protected Server server;
+    protected MusicServer server;
     protected RendezvousManager rendezvous;
     private AbstractAction reconnectHost;
     private AbstractAction removeLibrary;
@@ -412,7 +412,7 @@ public class GetItTogether implements ItemListener,
 		    GetItTogether.instance.stopPlaying();
 		    
 		    GITProperties.writeXML();
-		    Server.instance().stop();
+		    MusicServer.instance().stop();
 		    jmdns.close();
 			System.out.println("exit hook complete!");
 		}
@@ -444,7 +444,7 @@ public class GetItTogether implements ItemListener,
             public void run() {
                 GetItTogether.instance.stopPlaying();
                 GITProperties.writeXML();
-                Server.instance().stop();
+                MusicServer.instance().stop();
                 jmdns.close();
                 if (DownloadManager.dlThread != null && !gopher.isQueueFinished())
                     DownloadManager.dlThread.waitForDownloadToFinish();
@@ -726,7 +726,7 @@ public class GetItTogether implements ItemListener,
         setFocusToTable();
         openingWindow = false;
         
-        server = Server.instance();
+        server = MusicServer.instance();
         
         // load and auto-connect the local hosts:
         for (int i = 0; i < GITProperties.savedLocalHosts.size(); i++) {
