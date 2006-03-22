@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.*;
 import java.text.DateFormat;
 import java.util.*;
-import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.*;
@@ -228,10 +227,6 @@ public class JmDNS
 
         services = new Hashtable(20);
         serviceTypes = new Hashtable(20);
-        
-        messageQueue = new LinkedBlockingQueue();
-        incomingHandler = new IncomingHandler();
-        (new Thread(incomingHandler)).start();
 
         // REMIND: If I could pass in a name for the Timer thread,
         //         I would pass 'JmDNS.Timer'.
@@ -992,6 +987,12 @@ public class JmDNS
     {
         // We do not want to block the entire DNS while we are updating the record for each listener (service info)
         List listenerList = null;
+        try {
+        	Thread.sleep(5);  // TODO: for testing on slow computers only, SHOULD NOT BE HERE
+        }
+        catch(InterruptedException exc) {
+        	
+        }
         synchronized (this)
         {
             listenerList = new ArrayList(listeners);
@@ -1246,14 +1247,39 @@ public class JmDNS
                 {
                     packet.setLength(buf.length);
                     socket.receive(packet);
-                    try {
-                    	messageQueue.put(packet);
+                    if (state == DNSState.CANCELED)
+                    {
+                        break;
                     }
-                    catch(InterruptedException exc) {
-                    	exc.printStackTrace();
+                    try
+                    {
+                        if (localHost.shouldIgnorePacket(packet))
+                        {
+                            continue;
+                        }
+
+                        DNSIncoming msg = new DNSIncoming(packet);
+                        logger.finest("SocketListener.run() JmDNS in:" + msg.print(true));
+                        
+                        synchronized (ioLock)
+                        {
+                            if (msg.isQuery())
+                            {
+                                if (packet.getPort() != DNSConstants.MDNS_PORT)
+                                {
+                                    handleQuery(msg, packet.getAddress(), packet.getPort());
+                                }
+                                handleQuery(msg, group, DNSConstants.MDNS_PORT);
+                            }
+                            else
+                            {
+                                handleResponse(msg);
+                            }
+                        }
                     }
-                    if(messageQueue.size() == 1) {
-                    	notify();
+                    catch (IOException e)
+                    {
+                        logger.log(Level.WARNING, "run() exception ", e);
                     }
                 }
             }
@@ -1266,80 +1292,8 @@ public class JmDNS
                 }
             }
         }
-        
     }
-    
-    /**
-     * FIFO queue holding the incoming DNS messages.
-     */
-    private LinkedBlockingQueue messageQueue;
-    
-    private IncomingHandler incomingHandler;
-    
-    /**
-     * Handler for incoming DNS messages (for concurrency purposes).
-     * 
-     * @author	Frederic Cremer
-     */
-    private class IncomingHandler implements Runnable {
-    	
-    	private boolean running = true;
-    	
-    	public void run() {
-    		while(running) {
-    			try { 
-    				synchronized(this) {
-    					while(messageQueue.size() == 0) {
-    						wait();
-    				}
-    			}
-    			DatagramPacket packet = (DatagramPacket)messageQueue.take();
-    			if (state == DNSState.CANCELED)
-    			{
-    				break;
-    			}
-    			try
-    			{
-    				if (localHost.shouldIgnorePacket(packet))
-    				{
-    					continue;
-    				}
-    				
-    				DNSIncoming msg = new DNSIncoming(packet);
-    				logger.finest("SocketListener.run() JmDNS in:" + msg.print(true));
-    				
-    				synchronized (ioLock)
-    				{
-    					if (msg.isQuery())
-    					{
-    						if (packet.getPort() != DNSConstants.MDNS_PORT)
-    						{
-    							handleQuery(msg, packet.getAddress(), packet.getPort());
-    						}
-    						handleQuery(msg, group, DNSConstants.MDNS_PORT);
-    					}
-    					else
-    					{
-    						handleResponse(msg);
-    					}
-    				}
-    			}
-    			catch (IOException e)
-    			{
-    				logger.log(Level.WARNING, "run() exception ", e);
-    			}
-    			}
-    			catch(InterruptedException exc) {
-    				exc.printStackTrace();
-    			}
-    		}
-    	}
-    	
-        public void stop() {
-        	running = false;
-        }
-    	
-    }
+
 
     /**
      * Periodicaly removes expired entries from the cache.
@@ -2749,8 +2703,6 @@ public class JmDNS
         			
         			unregisterAllServices();
         			disposeServiceCollectors();
-        			
-        			incomingHandler.stop();
         			
         			// close socket
         			closeMulticastSocket();
