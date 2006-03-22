@@ -10,8 +10,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Hashtable;
 
-import javax.jmdns.JmDNS;
-import javax.jmdns.ServiceInfo;
+import org.mdnsm.mdns.ServiceInfo;
 
 import org.git.GITProperties;
 import org.git.GITUtils;
