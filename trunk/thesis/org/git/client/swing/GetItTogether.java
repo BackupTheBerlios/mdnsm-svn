@@ -96,7 +96,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-//import org.mdnsm.mdns.*;
+import org.mdnsm.mdns.ServiceInfo;
 import javax.swing.AbstractAction;
 import javax.swing.AbstractCellEditor;
 import javax.swing.Action;
