@@ -96,7 +96,12 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import org.mdnsm.mdns.ServiceEvent;
 import org.mdnsm.mdns.ServiceInfo;
+import org.mdnsm.mdns.ServiceListener;
+import org.mdnsm.client.*;
+import org.mdnsm.server.*;
+
 import javax.swing.AbstractAction;
 import javax.swing.AbstractCellEditor;
 import javax.swing.Action;
@@ -209,7 +214,7 @@ import ca.odell.glazedlists.swing.TextComponentMatcherEditor;
  * @created
  */
 public class GetItTogether implements ItemListener,
-		MouseWheelListener, FileListener {
+		MouseWheelListener, ServiceListener, FileListener {
 
 	public static final String SEARCHTEXT = "Search: ";
     public static final String FRAME_TITLE = "mDNSm";
@@ -234,7 +239,7 @@ public class GetItTogether implements ItemListener,
     protected static final String CARD_QUEUE = "Queue";
     protected static final String CARD_PODCASTS = "Podcasts";
     
-    protected static String iTunesService = "_daap._tcp.local.";
+    protected static String iTunesService = "_daap._tcp.*.local.";
     
     public static String SPLASH_PATH = "/images/splash.jpg";
     
@@ -252,7 +257,7 @@ public class GetItTogether implements ItemListener,
     public JFrame frame;
     protected JPanel hostsPane;
     protected JButton button;
-    protected JmDNS jmdns;
+    protected Client client;
     public static AbstractPlayer player;
     protected boolean pause = false;
     public DownloadTableModel dls;
@@ -413,7 +418,7 @@ public class GetItTogether implements ItemListener,
 		    
 		    GITProperties.writeXML();
 		    MusicServer.instance().stop();
-		    jmdns.close();
+		    client.shutdown();
 			System.out.println("exit hook complete!");
 		}
 	}
@@ -445,7 +450,7 @@ public class GetItTogether implements ItemListener,
                 GetItTogether.instance.stopPlaying();
                 GITProperties.writeXML();
                 MusicServer.instance().stop();
-                jmdns.close();
+                client.shutdown();
                 if (DownloadManager.dlThread != null && !gopher.isQueueFinished())
                     DownloadManager.dlThread.waitForDownloadToFinish();
                 System.out.println("Exit hook complete!");
@@ -780,13 +785,9 @@ public class GetItTogether implements ItemListener,
         }
         
         try {
-            InetAddress addr = GITUtils.getLocalInetAddress();
-            if (addr == null)
-                jmdns = new JmDNS();
-            else
-                jmdns = new JmDNS(addr);
-            jmdns.addServiceListener(iTunesService, this);
-            RendezvousManager.instance().setJmDNS(jmdns);
+            client = new Client();
+            client.addServiceListener(iTunesService, this);
+            RendezvousManager.instance().setClient(client);
             server.start();
         } catch (Exception e) {
             e.printStackTrace();
@@ -1013,8 +1014,8 @@ public class GetItTogether implements ItemListener,
 	    getVisibleCard().search_field.setText(text);
 	}
 
-	public void resolveService(JmDNS jmdns, String type, String name,
-            ServiceInfo info) {
+	public void serviceResolved(ServiceEvent event) {
+		ServiceInfo info = event.getInfo();
         if (info == null) {
             System.out.println("Unable to find service info!");
             return;
@@ -1081,19 +1082,23 @@ public class GetItTogether implements ItemListener,
 		}.start();
     }
 
-	public void addService(JmDNS jmdns, String type, String name) {
+	public void serviceAdded(ServiceEvent event) {
+		String type = event.getType(); // TODO: algemeen type!
+		String name = event.getName();
 		if (type.equals(iTunesService))
-			jmdns.requestServiceInfo(iTunesService, name);
+			client.requestServiceInfo(iTunesService, name);
 	}
 
-	public void removeService(JmDNS jmdns, String type, String name) {
+	public void serviceRemoved(ServiceEvent event) {
+		String name = event.getName();  // TODO: correct?
+		String type = event.getType();  // TODO: algemeen type!
 		if (name.equals(GITUtils.getQualifiedServiceName(GITProperties.shareName)))
 		{
 		    System.out.println("caught ya");
 		    return;
 		}
 	    
-	    ServiceInfo si = jmdns.getServiceInfo(type, name);
+	    ServiceInfo si = client.getServiceInfo(type, name);
 	    if (si == null || si.getName() == GITProperties.shareName)
 	        return;
 		System.out.println(name);

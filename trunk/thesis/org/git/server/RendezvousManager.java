@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.util.Hashtable;
 
 import org.mdnsm.mdns.ServiceInfo;
+import org.mdnsm.client.*;
 
 import org.git.GITProperties;
 import org.git.GITUtils;
@@ -41,7 +42,7 @@ public final class RendezvousManager extends BasicStatusObject{
     public static final int STATUS_REGISTERED = 1;
     
     private InetAddress address;
-    private JmDNS jmdns;
+    private Client client;
     private ServiceInfo server_info;
     
     public static RendezvousManager instance() {
@@ -122,8 +123,8 @@ public final class RendezvousManager extends BasicStatusObject{
         jmdns.close();
     }
     
-    public void setJmDNS(JmDNS mdns) {
-        jmdns = mdns;
+    public void setClient(Client client) {
+        this.client = client;
     }
     
 }
