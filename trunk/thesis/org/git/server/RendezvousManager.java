@@ -84,7 +84,7 @@ public final class RendezvousManager extends BasicStatusObject{
             return;
         
         ServiceInfo info = createServerInfo();
-        jmdns.registerService(info);
+        client.registerService(info);
         
         this.server_info = info;
         setStatus(STATUS_REGISTERED);
@@ -95,7 +95,7 @@ public final class RendezvousManager extends BasicStatusObject{
         if (!isRegistered())
             return;
 
-        jmdns.unregisterService(server_info);
+        client.unregisterService(server_info);
         this.server_info = null;
         setStatus(STATUS_UNREGISTERED);
     }
@@ -107,20 +107,17 @@ public final class RendezvousManager extends BasicStatusObject{
         
         unregisterServer();
         
-        try {
         ServiceInfo info = createServerInfo();
-        jmdns.registerService(info);
+        client.registerService(info);
         server_info = info;
         setStatus(STATUS_REGISTERED);
-        } catch (IOException io) {io.printStackTrace();}
     }
     
     // closes jmdns, unregisters all services.
     public synchronized void close() {
         setStatus(STATUS_UNREGISTERED);
         server_info = null;
-        jmdns.unregisterAllServices();
-        jmdns.close();
+        client.shutdown();
     }
     
     public void setClient(Client client) {

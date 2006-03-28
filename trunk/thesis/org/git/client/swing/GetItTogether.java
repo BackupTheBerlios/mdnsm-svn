@@ -96,9 +96,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import org.mdnsm.mdns.ServiceEvent;
-import org.mdnsm.mdns.ServiceInfo;
-import org.mdnsm.mdns.ServiceListener;
+import org.mdnsm.mdns.*;
 import org.mdnsm.client.*;
 import org.mdnsm.server.*;
 
@@ -1083,24 +1081,26 @@ public class GetItTogether implements ItemListener,
     }
 
 	public void serviceAdded(ServiceEvent event) {
-		String type = event.getType(); // TODO: algemeen type!
-		String name = event.getName();
-		if (type.equals(iTunesService))
-			client.requestServiceInfo(iTunesService, name);
+		ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
+		if ((JmDNS.convertToType(event.getType())).equals(iTunesService)) // TODO: KLOPTA?
+			client.requestServiceInfo(info);
 	}
 
 	public void serviceRemoved(ServiceEvent event) {
-		String name = event.getName();  // TODO: correct?
-		String type = event.getType();  // TODO: algemeen type!
+		String name = event.getName();  // TODO: KLOPTA?
+		String type = event.getType();
 		if (name.equals(GITUtils.getQualifiedServiceName(GITProperties.shareName)))
 		{
 		    System.out.println("caught ya");
 		    return;
 		}
 	    
-	    ServiceInfo si = client.getServiceInfo(type, name);
-	    if (si == null || si.getName() == GITProperties.shareName)
-	        return;
+//	    ServiceInfo si = client.getServiceInfo(type, name);
+//	    if (si == null || si.getName() == GITProperties.shareName)
+//	        return;
+		
+		ServiceInfo si = new ServiceInfo(type, name);  // TODO: KLOPTA?
+		
 		System.out.println(name);
 		DaapHost h = new DaapHost(si);
 		String hname = h.getName();

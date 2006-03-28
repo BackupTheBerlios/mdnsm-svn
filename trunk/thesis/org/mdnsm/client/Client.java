@@ -662,10 +662,13 @@ public class Client {
 	 */
 	
 	/**
-	 * Request information about the given type and feed the information to the
-	 * given listener.
+	 * Add a service listener listening for services of the given
+	 * type.
+	 * 
+	 * @param	General type, e.g. "_daap._tcp.*.local."
+	 * @param	Actual service listener, e.g. GetItTogether instance
 	 */
-	public void requestInfo(String type, ServiceListener listener) {
+	public void addServiceListener(String type, ServiceListener listener) {
 		type = type.toLowerCase();
 		if(infoListeners.containsKey(type)) {
 			Vector listeners = (Vector)infoListeners.get(type);
@@ -676,7 +679,22 @@ public class Client {
 			vector.add(listener);
 			infoListeners.put(type, vector);
 		}
+	}
+	
+	/**
+	 * Request information about the given type and feed the information to the
+	 * given listener.
+	 */
+	public void requestServices(String type) {
+		type = type.toLowerCase();
 		(new ServiceResolver(type)).start();
+	}
+	
+	/**
+	 * Request information about the given service.
+	 */
+	public void requestServiceInfo(ServiceInfo info) {
+		(new ServiceInfoResolver(info)).start();
 	}
 	
 	/**
@@ -915,7 +933,7 @@ public class Client {
     					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()), null));
     				}
     				
-    				(new ServiceInfoResolver(info)).start();
+    				//(new ServiceInfoResolver(info)).start();
     				break;
     			case DNSConstants.TYPE_SRV:
     				//System.out.println("srv to " + rec.getName());
