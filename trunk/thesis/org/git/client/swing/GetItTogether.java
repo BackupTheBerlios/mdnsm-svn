@@ -786,6 +786,7 @@ public class GetItTogether implements ItemListener,
             client = new Client();
             client.addServiceListener(iTunesService, this);
             RendezvousManager.instance().setClient(client);
+            Thread.sleep(5000);  // TODO: properder oplossen
             server.start();
         } catch (Exception e) {
             e.printStackTrace();

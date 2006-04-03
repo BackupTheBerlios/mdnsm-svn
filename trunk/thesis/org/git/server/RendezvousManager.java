@@ -29,7 +29,7 @@ public final class RendezvousManager extends BasicStatusObject{
     
     private static RendezvousManager INSTANCE = new RendezvousManager();
     
-    public static final String DAAP_SERVICE_TYPE = "_daap._tcp.local.";
+    public static final String DAAP_SERVICE_TYPE = "_daap._tcp.*.local.";
     public static final String MACHINE_NAME = "Machine Name";
     public static final String PASSWORD = "Password";
     public static final String VERSION = "Version";
@@ -66,9 +66,9 @@ public final class RendezvousManager extends BasicStatusObject{
         props.put(VERSION, String.valueOf(DaapUtil.VERSION_3));
         props.put(SERVER_PROGRAM, GIT_SERVER);
         
-        String qualified_name = GITUtils.getQualifiedServiceName(name);
+        //String qualified_name = GITUtils.getQualifiedServiceName(name);
         
-        info = new ServiceInfo(DAAP_SERVICE_TYPE, qualified_name, port,
+        info = new ServiceInfo(DAAP_SERVICE_TYPE, name, port,
             				0, 0, props);
         
         return info;
@@ -94,7 +94,6 @@ public final class RendezvousManager extends BasicStatusObject{
     public synchronized void unregisterServer() {
         if (!isRegistered())
             return;
-
         client.unregisterService(server_info);
         this.server_info = null;
         setStatus(STATUS_UNREGISTERED);

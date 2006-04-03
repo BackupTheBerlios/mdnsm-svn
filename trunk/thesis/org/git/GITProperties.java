@@ -64,7 +64,7 @@ public final class GITProperties implements Serializable{
     public static boolean expandRemote = true;
     protected static GetItTogether git;
     private static Document xml_doc;
-    public static boolean showSplash = true;
+    public static boolean showSplash = false;
     public static int shuffleValue = 0;
     public static String dlDir = "./";
     public static String tempDir = "./";

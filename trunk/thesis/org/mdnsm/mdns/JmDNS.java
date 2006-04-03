@@ -632,6 +632,7 @@ public class JmDNS
      */
     public void registerService(ServiceInfo info) throws IOException
     {
+    	System.out.println("registering type " + info.getType() + " with instance name " + info.getName());
         registerServiceType(info.type);
 
         // bind the service to this address
