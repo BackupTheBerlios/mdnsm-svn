@@ -655,7 +655,6 @@ public class DataPool
 			{
 				value = this.getMeta( (Long)clipIter.next() ).getArtist();
 
-				// TODO: DEBUG
 				if( value != null && values != null && !values.contains(value) )
 				{
 					values.addElement(value);

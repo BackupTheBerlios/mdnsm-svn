@@ -467,7 +467,6 @@ public class myPod
 		clipsModel.tableChanged( new TableModelEvent(clipsModel) );
 	
 		// update spreader list
-		// TODO: axel.wernicke@gmx.de still have to determine how ...
 	}
 	
 

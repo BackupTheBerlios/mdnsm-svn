@@ -1263,7 +1263,6 @@ public class GetItTogether implements ItemListener,
 	 * Defines the action to be performed when the given node is clicked.
 	 */
 	protected void nodeClicked(final GITNode node) {
-		// TODO: extra services
 	    int type = node.getType();
 	    switch(type) {
 	        case GITNode.LOCAL_ROOT:

@@ -114,7 +114,6 @@ public class IcyInputStream
 	    block of metadata.  Only meaningful if metaint != -1.
 	 */
 	protected int bytesUntilNextMetadata = -1;
-	// TODO: comment for constructor
 	/** Reads the initial headers of the stream and adds
 	    tags appropriatly.  Gets set up to find, read, 
 	    and strip blocks of in-line metadata if the

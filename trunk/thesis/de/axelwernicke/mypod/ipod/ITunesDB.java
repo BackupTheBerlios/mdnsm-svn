@@ -202,7 +202,6 @@ public class ITunesDB
 
 		long totalSize = -1;
 		
-		// TODO: clean up if( songlistHeader != null && songlistHeader.getSongItems() != null )
 		if( songlistHeader != null )
 		{
 			totalSize = 0;
@@ -231,7 +230,6 @@ public class ITunesDB
 		logger.entering("de.axelwernicke.mypod.ipod.ITunesDB", "getTotalFilesize");
 		long totalSize = 0;
 		
-		// TODO: clean up		if( songlistHeader != null && songlistHeader.getSongItems() != null )
 		if( songlistHeader != null )
 		{
 			// iterate over all file indices
