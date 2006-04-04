@@ -487,7 +487,7 @@ public class ServiceInfo implements DNSListener {
 		if ((rec != null) && !rec.isExpired(now)) {
 			switch (rec.type) {
 			case DNSConstants.TYPE_A: // IPv4
-			case DNSConstants.TYPE_AAAA: // IPv6 FIXME [PJYF Oct 14 2004]
+			case DNSConstants.TYPE_AAAA: // IPv6 
 											// This has not been tested
 				if (rec.name.equals(server)) {
 					addr = ((DNSRecord.Address) rec).getAddress();

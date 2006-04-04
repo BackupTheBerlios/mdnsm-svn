@@ -187,7 +187,6 @@ public class GITLibraryHost extends LocalHost{
             try {
                 f.createNewFile();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -361,11 +360,9 @@ public class GITLibraryHost extends LocalHost{
         try {
             baseFileFormat = AudioSystem.getAudioFileFormat(f);
         } catch (UnsupportedAudioFileException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return;
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return;
         }
@@ -478,11 +475,9 @@ public class GITLibraryHost extends LocalHost{
                 try {
                     baseFileFormat = AudioSystem.getAudioFileFormat(f);
                 } catch (UnsupportedAudioFileException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                     continue;
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                     continue;
                 }

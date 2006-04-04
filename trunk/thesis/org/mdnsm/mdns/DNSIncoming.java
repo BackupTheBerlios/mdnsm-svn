@@ -97,7 +97,7 @@ public final class DNSIncoming
                     switch (type)
                     {
                         case DNSConstants.TYPE_A:		// IPv4
-                        case DNSConstants.TYPE_AAAA:	// IPv6 FIXME [PJYF Oct 14 2004] This has not been tested
+                        case DNSConstants.TYPE_AAAA:	// IPv6
                             rec = new DNSRecord.Address(domain, type, clazz, ttl, readBytes(off, len));
                             break;
                         case DNSConstants.TYPE_CNAME:

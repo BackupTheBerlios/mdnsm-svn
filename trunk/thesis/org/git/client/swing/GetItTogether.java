@@ -505,7 +505,6 @@ public class GetItTogether implements ItemListener,
         gopher = new DownloadManager(this);
         
         // Creating the played songs stack.
-        // TODO: Make a separate Class to handle the player queue / logic stuff
         playedSongs = new ArrayList();
         thisShuffle = GITProperties.shuffleValue;
         
@@ -913,7 +912,6 @@ public class GetItTogether implements ItemListener,
 //	                    model.fireTableRowsUpdated(ind, ind);
 	                
 				    
-				    //TODO: Find a way to "nicely" try to play the next song...
 				    return;
 			    }
 				loading_song = true;
@@ -968,7 +966,6 @@ public class GetItTogether implements ItemListener,
 	}
 	
 	protected void startDownloads() {
-	    // FIXME  There is a huge gui lag since this timer is on the same queue as gui updates and it takes "a lot" of time updating/downloading...
 	    // need to have it's own thread for this, perhaps the one that calls this at the beginning?
 //	    new Timer(10, new AbstractAction() {
 //	        public void actionPerformed(ActionEvent e) {
@@ -994,7 +991,6 @@ public class GetItTogether implements ItemListener,
 	}
 	
 	public void locatePlayingSong(boolean center) {
-		//TODO: make the current table scroll to the playing song, if it's found.
 			EventList model = getVisibleEventList();
 			JTable table = getVisibleCard().table;
 			if (model.size() == 0 || model.indexOf(playingSong) == -1) {
@@ -1034,8 +1030,25 @@ public class GetItTogether implements ItemListener,
 	public void searchText(String text) {
 	    getVisibleCard().search_field.setText(text);
 	}
-
+	
+	private int REQUEST_INTERVAL = 10000;  // TODO: ok?
+	
+	private class ServiceRequester extends TimerTask {
+		
+		public void start() {
+			timer.schedule(this, 0, REQUEST_INTERVAL);
+		}
+		
+		public void run() {
+			client.requestServices(iTunesService);
+			client.requestServices(lyricsService);
+			client.requestServices(settingsService);
+		}
+		
+	}
+	
 	public void serviceResolved(ServiceEvent event) {
+		// TODO: opsplitsen in verschillende types, of van lyrics en settings ook gewoon DAAP host laten maken?
 		ServiceInfo info = event.getInfo();
         if (info == null) {
             System.out.println("Unable to find service info!");
@@ -1110,7 +1123,8 @@ public class GetItTogether implements ItemListener,
 	}
 
 	public void serviceRemoved(ServiceEvent event) {
-		String name = event.getName();  // TODO: KLOPTA?
+		// TODO: mogelijk verkeerd
+		String name = event.getName();
 		String type = event.getType();
 		if (name.equals(GITUtils.getQualifiedServiceName(GITProperties.shareName)))
 		{
@@ -3854,7 +3868,6 @@ public class GetItTogether implements ItemListener,
                         Song copy = (Song)orig.clone();
                         copiedSongs.add(copy);
                     } catch (CloneNotSupportedException e1) {
-                        // TODO Auto-generated catch block
                         e1.printStackTrace();
                     }
 			    }
@@ -3935,7 +3948,6 @@ public class GetItTogether implements ItemListener,
 		            try {
                         Thread.sleep(500);
                     } catch (InterruptedException e1) {
-                        // TODO Auto-generated catch block
                         e1.printStackTrace();
                     }
 		            connectHostNode(hnode);
@@ -3997,7 +4009,6 @@ public class GetItTogether implements ItemListener,
 
 		cancelSearch = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
-			    //TODO: integrate with glazed lists (or nix it!)
 			    
 			}
 		};
@@ -4129,7 +4140,6 @@ public class GetItTogether implements ItemListener,
 		
 		removee = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
-				//TODO: Remove selected songs from playlist.
 			}
 		};
 		removee.putValue(ACTION_DESC, "Remove from playlist");
@@ -5787,12 +5797,10 @@ public class GetItTogether implements ItemListener,
 	    }
 
         public void close() throws SecurityException {
-            // TODO Auto-generated method stub
             
         }
 
         public void flush() {
-            // TODO Auto-generated method stub
             
         }
 	    

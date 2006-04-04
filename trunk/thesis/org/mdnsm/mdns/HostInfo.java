@@ -40,7 +40,6 @@ public class HostInfo
             }
             catch (Exception exception)
             {
-                // FIXME Shouldn't we take an action here?
                 logger.log(Level.WARNING, "LocalHostInfo() exception ", exception);
             }
         }

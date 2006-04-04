@@ -58,7 +58,6 @@ public class myPod
 	public static final String myPodBaseDir = System.getProperty("user.dir");
 	
 	/** has accelerator, small icon and text
-		// TODO: we should clean them up, but they are contained in the frontend.jave...
 	 */
 	public static final int MENU_ACTION = 1;
 	public static final int POPUP_ACTION = 2;

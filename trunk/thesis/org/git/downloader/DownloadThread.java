@@ -123,7 +123,6 @@ public class DownloadThread extends Thread {
 	    try {
             wait();
         } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 	}

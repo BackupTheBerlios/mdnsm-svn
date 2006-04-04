@@ -195,7 +195,6 @@ public class SongTableModel extends MyTableModel {
 	 * @return      The cellEditable value
 	 */
 	public boolean isCellEditable(int row, int col) {
-		//TODO: Make only the playing song editable.
 	    if (col == 3)
 	        return true;
 	    else

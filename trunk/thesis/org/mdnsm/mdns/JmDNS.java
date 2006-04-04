@@ -1871,7 +1871,6 @@ public class JmDNS
                 }
 
                 // We use these sets to prevent duplicate records
-                // FIXME - This should be moved into DNSOutgoing
                 HashSet questions = new HashSet();
                 HashSet answers = new HashSet();
 

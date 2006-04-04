@@ -68,7 +68,7 @@ public class ITunesDBSonglistHeader {
 		songItem.setFilesize((int) meta.getFilesize());
 		songItem.setRecordIndex(fileIndex);
 		songItem.setTrackNumber(meta.getTrack());
-		songItem.setUnknown8(256);  // TODO: - not sure what that meta data means in the db
+		songItem.setUnknown8(256);
 //		songItem.unknown6 = 0;
 //		songItem.unknown7 = 0;
 //		songItem.unknown13 = 0;
@@ -81,7 +81,6 @@ public class ITunesDBSonglistHeader {
 				ITunesDBParser.stringToUTF16LittleEndian("MPEG audio file")));
 
 		/**
-		 *  TODO: take care of this when switching to store files in other
 		 *  directories than F00
 		 */
 		String path                = new StringBuffer(":iPod_Control:Music:F00:").append(fileIndex).append(".mp3").toString();

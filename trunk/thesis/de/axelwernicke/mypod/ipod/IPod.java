@@ -304,7 +304,7 @@ public class IPod {
 				// get oid, file index and file name of the clip to remove
 				oid = (Long) iter.next();
 				fileIndex = ((Integer) iMapper.get(oid)).intValue();
-				filename = getITunesDB().getFilename(fileIndex);  // TODO: sometimes we fail in here !!
+				filename = getITunesDB().getFilename(fileIndex);
 
 				// prepare filename ( mac -> java )
 				filename = filename.replace(':', File.separatorChar);
