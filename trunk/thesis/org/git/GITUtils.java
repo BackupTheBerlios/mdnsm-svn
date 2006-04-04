@@ -21,6 +21,7 @@ import javax.swing.Action;
 
 import org.git.client.Song;
 import org.git.client.swing.SwingWorker;
+import org.git.client.swing.GetItTogether;
 import org.git.server.RendezvousManager;
 
 import ca.odell.glazedlists.EventList;
@@ -68,8 +69,8 @@ public final class GITUtils {
     }
     
     public static String getQualifiedServiceName(String name) {
-        String qualified_name = (GITProperties.sharePasswordRequired ? name + "_PW." + RendezvousManager.DAAP_SERVICE_TYPE :
-			name + "." + RendezvousManager.DAAP_SERVICE_TYPE);
+        String qualified_name = (GITProperties.sharePasswordRequired ? name + "_PW." + GetItTogether.iTunesService :
+			name + "." + GetItTogether.iTunesService);
         return qualified_name;
     }
 

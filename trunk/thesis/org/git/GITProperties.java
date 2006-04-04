@@ -26,6 +26,8 @@ import javax.swing.DefaultListModel;
 
 import org.git.client.daap.DaapHost;
 import org.git.client.local.GITLibraryHost;
+import org.git.client.local.GITLyricsHost;
+import org.git.client.local.GITSettingsHost;
 import org.git.client.local.IPodHost;
 import org.git.client.local.ItunesHost;
 import org.git.client.local.LocalHost;
@@ -45,7 +47,7 @@ import org.jdom.output.XMLOutputter;
  */
 public final class GITProperties implements Serializable{
     
-    // SERVER SETTINGS:
+    // MUSIC SERVER SETTINGS:
     public static String specialFriend = "";
     public static int sharePort = 5371;
     public static String shareName = "GITunes";
@@ -53,6 +55,22 @@ public final class GITProperties implements Serializable{
     public static int shareLimit = 5;
     public static String sharePassword = "pw";
     public static boolean sharePasswordRequired = false;
+    
+    // LYRICS SERVER SETTINGS:
+    public static int lyricsSharePort = 5372;
+    public static String lyricsShareName = "gitlyrics";
+    public static boolean lyricsShareEnabled = true;
+    public static int lyricsShareLimit = 5;
+    public static String lyricsSharePassword = "lpw";
+    public static boolean lyricsSharePasswordRequired = false;
+    
+    // SETTINGS SERVER SETTINGS:
+    public static int settingsSharePort = 5373;
+    public static String settingsShareName = "gitsettings";
+    public static boolean settingsShareEnabled = true;
+    public static int settingsShareLimit = 5;
+    public static String settingsSharePassword = "spw";
+    public static boolean settingsSharePasswordRequired = false;
     
     // CLIENT SETTINGS:
     public static boolean hideUnsupportedSongs = false;
@@ -91,8 +109,10 @@ public final class GITProperties implements Serializable{
     
     static {
         savedLocalHosts.add(new GITLibraryHost("GIT Music",""));
-        savedLocalHosts.add(new IPodHost("iPod","g:/"));
-        savedLocalHosts.add(new ItunesHost("iTunes Music",""));
+        savedLocalHosts.add(new GITLyricsHost("GIT Lyrics", ""));
+        savedLocalHosts.add(new GITSettingsHost("GIT Settings", ""));
+        //savedLocalHosts.add(new IPodHost("iPod","g:/"));
+        //savedLocalHosts.add(new ItunesHost("iTunes Music",""));
     }
         
     static public void loadPropertyString(String base, String property, String field) {
@@ -429,13 +449,19 @@ public final class GITProperties implements Serializable{
                 int type = 0;
                 switch (type = cur.getAttribute("type").getIntValue()) {
                 case LocalHost.IPOD:
-                    host = new IPodHost(name, location);
+                    //host = new IPodHost(name, location);
                 break;
                 case LocalHost.GIT_LIBRARY:
                     host = new GITLibraryHost(name,location);
                 break;
+                case LocalHost.GIT_LYRICS:
+                	host = new GITLyricsHost(name, location);
+                break;
+                case LocalHost.GIT_SETTINGS:
+                	host = new GITSettingsHost(name, location);
+                break;
                 case LocalHost.ITUNES_XML:
-                    host = new ItunesHost(name,location);
+                    //host = new ItunesHost(name,location);
                 default:
                 
                 }

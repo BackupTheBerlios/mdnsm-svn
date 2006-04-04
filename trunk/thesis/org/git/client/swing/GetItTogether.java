@@ -189,8 +189,8 @@ import org.git.player.PlayerAdapter;
 import org.git.player.PlayerException;
 import org.git.player.PlayerUtils;
 import org.git.player.QTPlayer;
-import org.git.server.RendezvousManager;
-import org.git.server.MusicServer;
+
+import org.git.server.*;
 
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.io.CachingList;
@@ -228,8 +228,8 @@ public class GetItTogether implements ItemListener,
     
     public static final String DOWNLOAD_COUNTER = "Downloaded Songs: ";
     
-    protected static final String CARD_LOCAL = "Local Music";
-    protected static final String CARD_SHARED = "Shared Music";
+    protected static final String CARD_LOCAL = "Local Services";
+    protected static final String CARD_SHARED = "Shared Services";
     protected static final String CARD_PLAYLISTS = "Playlists";
     protected static final String CARD_SETTINGS = "Settings";
     protected static final String CARD_DOWNLOADS = "Downloads";
@@ -237,7 +237,9 @@ public class GetItTogether implements ItemListener,
     protected static final String CARD_QUEUE = "Queue";
     protected static final String CARD_PODCASTS = "Podcasts";
     
-    protected static String iTunesService = "_daap._tcp.*.local.";
+    public static String iTunesService = "_daap._tcp.*.local.";
+    public static String lyricsService = "_mltp._tcp.*.local."; // Music Lyrics Transfer Protocol - fictional, could be based on HTTP
+    public static String settingsService = "_mstp._tcp.*.local."; // mDNSm Settings Transfer Protocol - fictional, could be based on XML transfer over HTTP
     
     public static String SPLASH_PATH = "/images/splash.jpg";
     
@@ -331,7 +333,11 @@ public class GetItTogether implements ItemListener,
     private JLabel helpLabel;
     protected TimerTask tableTimerTask;
     public static IPodHost iPodHost;
-    protected MusicServer server;
+    
+    protected MusicServer musicServer;
+    protected LyricsServer lyricsServer;
+    protected SettingsServer settingsServer;
+    
     protected RendezvousManager rendezvous;
     private AbstractAction reconnectHost;
     private AbstractAction removeLibrary;
@@ -414,7 +420,7 @@ public class GetItTogether implements ItemListener,
 		public void run() {
 		    GetItTogether.instance.stopPlaying();
 		    
-		    GITProperties.writeXML();
+		    //GITProperties.writeXML();
 		    MusicServer.instance().stop();
 		    client.shutdown();
 			System.out.println("exit hook complete!");
@@ -425,6 +431,7 @@ public class GetItTogether implements ItemListener,
         instance = this;
 	    openingWindow = true;
         
+	    // Setting UI style
         try {
 //            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 //            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
@@ -436,6 +443,7 @@ public class GetItTogether implements ItemListener,
         UIManager.put("Table.focusCellHighlightBorder", BorderFactory
                 .createEmptyBorder(1, 1, 1, 1));
         
+        // Creating keyboard focus adapter
         focus = new FocusAdapter() {
         
             public void focusGained(FocusEvent e) {
@@ -443,10 +451,11 @@ public class GetItTogether implements ItemListener,
             }
         };
         
+        // Creating shutdown hook thread
         shutdownHook = new Thread() {
             public void run() {
                 GetItTogether.instance.stopPlaying();
-                GITProperties.writeXML();
+                //GITProperties.writeXML();
                 MusicServer.instance().stop();
                 client.shutdown();
                 if (DownloadManager.dlThread != null && !gopher.isQueueFinished())
@@ -455,11 +464,15 @@ public class GetItTogether implements ItemListener,
             }
         };
         Runtime.getRuntime().addShutdownHook(shutdownHook);
+        
+        // Setting frame and frame title
         frame = (JFrame)splash.getParent();
         frame.setTitle(FRAME_TITLE);
         
+        // Loading properties
         new GITProperties();
         
+        // Showing splash screen
         System.out.println("Show Splash: "+GITProperties.showSplash);
         
         if (GITProperties.showSplash) {
@@ -471,15 +484,16 @@ public class GetItTogether implements ItemListener,
             splash.getLayeredPane().add(cb, new Integer(200));
         	cb.addItemListener(this);
         }
-                
+        
+        // Setting top icon
         URL imageURL = GetItTogether.class.getResource("/images/puzzle_super_mini.png");
         frame.setIconImage(frame.getToolkit().getImage(imageURL));
         
-        //		define all the actions to be used.
+        // Defining all the actions to be used.
         createActions();
         blankAction = new ActionEvent(new Integer(0), ActionEvent.ACTION_PERFORMED, "");       
         
-        //		create the player object.
+        // Creating the player object.
         PlayerUtils.loadNewPlayer(GITProperties.playerType);
         Logger.getLogger(BasicPlayer.class.getName()).setLevel(Level.OFF);
         
@@ -487,15 +501,15 @@ public class GetItTogether implements ItemListener,
         player.setVolume(GITProperties.playerVolume / 100.0);
         } catch (PlayerException e) {}
 
-        //		create the downloader object.
+        // Creating the downloader object.
         gopher = new DownloadManager(this);
         
-        // create the played songs stack.
+        // Creating the played songs stack.
         // TODO: Make a separate Class to handle the player queue / logic stuff
         playedSongs = new ArrayList();
         thisShuffle = GITProperties.shuffleValue;
         
-        // create the main split pane
+        // Creating the main split pane
         createSplitPane();
         main = new JPanel();
         main.setLayout(new BoxLayout(main, BoxLayout.X_AXIS));
@@ -506,13 +520,14 @@ public class GetItTogether implements ItemListener,
                 new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
         frame.getContentPane().add(main);
         
+        // Creating player display
         createDisplay();
         
         //        dspanel.setInputMap(ancestor, tabs.getInputMap(ancestor));
         //        dspanel.setInputMap(focused, tabs.getInputMap(ancestor));
         //        dspanel.setActionMap(tabs.getActionMap());
         
-        // help panel:
+        // Creating help panel:
         createHelpPanel();
         
         frame.getContentPane().add(dspanel);
@@ -636,7 +651,7 @@ public class GetItTogether implements ItemListener,
         GITProperties.bigPos = frame.getLocation();
         GITProperties.bigSize = frame.getSize();
 
-        // create the Playlists' status listener.
+        // Creating the playlists' status listener.
         plistener = new StatusListener() {
             public void stateUpdated(Object h) {
                 Playlist p = (Playlist)h;
@@ -655,7 +670,7 @@ public class GetItTogether implements ItemListener,
             }
         };
         
-//        create the Hosts' status listener.
+        // Creating the hosts' status listener.
         status_listener = new StatusListener() {
             public void stateUpdated(Object h) {
                 final GITNode node = root.getChildByObject(h);
@@ -694,12 +709,12 @@ public class GetItTogether implements ItemListener,
         };
         
         
-//        create the tree framework.
+        // Creating the tree framework
         
-        local = new GITNode("Local Music", GITNode.LOCAL_ROOT);
+        local = new GITNode("Local Services", GITNode.LOCAL_ROOT);
         root.add(local);
         
-        hosts = new GITNode("Shared Music", GITNode.DAAP_ROOT);
+        hosts = new GITNode("Shared Services", GITNode.DAAP_ROOT);
         root.add(hosts);
         
 //        podcasts = new HostNode(new PodcastHost("Podcasts"));
@@ -729,11 +744,14 @@ public class GetItTogether implements ItemListener,
         setFocusToTable();
         openingWindow = false;
         
-        server = MusicServer.instance();
+        musicServer = MusicServer.instance();
+        lyricsServer = LyricsServer.instance();
+        settingsServer = SettingsServer.instance();
         
         // load and auto-connect the local hosts:
-        for (int i = 0; i < GITProperties.savedLocalHosts.size(); i++) {
-            final LocalHost host = (LocalHost)GITProperties.savedLocalHosts.get(i);
+        ArrayList al = GITProperties.savedLocalHosts;
+        for (int i = 0; i < al.size(); i++) {
+            final LocalHost host = (LocalHost)al.get(i);
             host.setSongs(localSongs.createMemberList());
             localSongs.addMemberList(host.getSongs());
             if (host instanceof IPodHost)
@@ -785,9 +803,13 @@ public class GetItTogether implements ItemListener,
         try {
             client = new Client();
             client.addServiceListener(iTunesService, this);
+            client.addServiceListener(lyricsService, this);
+            client.addServiceListener(settingsService, this);
             RendezvousManager.instance().setClient(client);
             Thread.sleep(5000);  // TODO: properder oplossen
-            server.start();
+            musicServer.start();
+            lyricsServer.start();
+            settingsServer.start();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1237,7 +1259,11 @@ public class GetItTogether implements ItemListener,
 	    }.start();
 	}
 	
+	/**
+	 * Defines the action to be performed when the given node is clicked.
+	 */
 	protected void nodeClicked(final GITNode node) {
+		// TODO: extra services
 	    int type = node.getType();
 	    switch(type) {
 	        case GITNode.LOCAL_ROOT:
@@ -1287,29 +1313,29 @@ public class GetItTogether implements ItemListener,
 	
 	public void addNewHost() {
 	
-	GetNewHost gnh = new GetNewHost(frame, true);
-	gnh.show();
-	
-	if (gnh.getStatus() == GetNewHost.STATUS_PRESSED_CANCEL) {
-	    return;
-	}
-	
-	InetAddress ip = gnh.getHostAddress();
-	int port = gnh.getPort();
-	String name = gnh.getHostName();
-	
-	gnh.dispose();
-	
-	final DaapHost nhost = new DaapHost(name, "", ip, port);
-	SwingUtilities.invokeLater(new Runnable() {
-          public void run() {
-              HostNode node = new HostNode(nhost);
-              hosts.insert(node, hosts.getIndexForInsertion(node));
-              if (hosts.getChildCount() == 1 && GITProperties.expandRemote)
-                  tree.expandPath(new TreePath(hosts.getPath()));
-              tree.repaint();
-          }
-      });
+		GetNewHost gnh = new GetNewHost(frame, true);
+		gnh.show();
+		
+		if (gnh.getStatus() == GetNewHost.STATUS_PRESSED_CANCEL) {
+		    return;
+		}
+		
+		InetAddress ip = gnh.getHostAddress();
+		int port = gnh.getPort();
+		String name = gnh.getHostName();
+		
+		gnh.dispose();
+		
+		final DaapHost nhost = new DaapHost(name, "", ip, port);
+		SwingUtilities.invokeLater(new Runnable() {
+	          public void run() {
+	              HostNode node = new HostNode(nhost);
+	              hosts.insert(node, hosts.getIndexForInsertion(node));
+	              if (hosts.getChildCount() == 1 && GITProperties.expandRemote)
+	                  tree.expandPath(new TreePath(hosts.getPath()));
+	              tree.repaint();
+	          }
+	      });
 	}
 	
 	 public void hostClicked(final GITNode node) {   
@@ -1410,13 +1436,13 @@ public class GetItTogether implements ItemListener,
 	}
 	
 	public void addSongsGlazed(final Host h) {
-	    if (h instanceof LocalHost && server != null)
-	        server.addSongs(h.getSongs());
+	    if (h instanceof LocalHost && musicServer != null)
+	        musicServer.addSongs(h.getSongs());
 	}
 	
 	protected void removeSongsGlazed(Host h) {
 	    if (h instanceof LocalHost)
-	        server.removeSongs(h.getSongs());
+	        musicServer.removeSongs(h.getSongs());
 	}
 
 	public void deleteSongs(EventList songs) {
@@ -3616,11 +3642,15 @@ public class GetItTogether implements ItemListener,
 		bottomPanel.repaint();
 	}
 	
+	/**
+	 * Create the actions to be performed.
+	 */
 	public void createActions() {
 	// Note to self: Actions should not have built-in SwingWorkers.  That should be dealt
 	//	with by the calling method, or I may figure out a way to dynamically
 	//	instantiate SwingWorkers...
-
+		
+		// Toggle mini status of window
 		toggleMini = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				if (!miniPlay) {
@@ -3699,7 +3729,8 @@ public class GetItTogether implements ItemListener,
 		};
 		toggleMini
 				.putValue(ACTION_DESC, "Change shuffle mode");
-
+		
+		// Change shuffle mode
 		changeShuffle = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				if (GITProperties.shuffleValue == RANDOM_PLAYLIST
@@ -3715,6 +3746,7 @@ public class GetItTogether implements ItemListener,
 		changeShuffle.putValue(ACTION_DESC,
 				"Change shuffle mode");
 
+		// Choosing a directory
 		chooseDirectory = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				JFileChooser fileChooser = new JFileChooser();
@@ -3738,6 +3770,7 @@ public class GetItTogether implements ItemListener,
 		chooseDirectory.putValue(ACTION_DESC,
 				"Choose download location");
 
+		// Browsing through the last selected node (playlist, DAAP, ...)
 		browseHost =
 			new AbstractAction() {
 				public void actionPerformed(ActionEvent e) {
@@ -3746,6 +3779,7 @@ public class GetItTogether implements ItemListener,
 			};
 		browseHost.putValue(ACTION_DESC, "Show/hide host");
 
+		// Toggling help text
 		toggleHelp = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				if (hide_help == false) {
@@ -3764,13 +3798,15 @@ public class GetItTogether implements ItemListener,
 		};
 		toggleHelp.putValue(ACTION_DESC, "Toggle help");
 
+		// Playing next song
 		playNext = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				queue.playNext();
 			}
 		};
 		playNext.putValue(ACTION_DESC, "Play next");
-
+		
+		// Playing previous song
 		playPrevious = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 			    queue.playPrevious();
@@ -3778,6 +3814,7 @@ public class GetItTogether implements ItemListener,
 		};
 		playPrevious.putValue(ACTION_DESC, "Play previous");
 		
+		// Switching tab view when pressing CTRL-TAB
 		switchTabs = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				//System.out.println(e.getSource());
@@ -3792,6 +3829,7 @@ public class GetItTogether implements ItemListener,
 		};
 		switchTabs.putValue(ACTION_DESC, "Tab Cycle");
 		
+		// Reversed switching tab view when pressing CTRL-SHIFT-TAB
 		revSwitchTabs = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				int row = views.getSelectedIndex();
@@ -3805,6 +3843,7 @@ public class GetItTogether implements ItemListener,
 		};
 		revSwitchTabs.putValue(ACTION_DESC, "Tab Cycle");
 
+		// Queueing songs
 		enqueueSongs = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 			    EventList songs = getCurrentlySelectedSongs();
@@ -3825,6 +3864,7 @@ public class GetItTogether implements ItemListener,
 		};
 		enqueueSongs.putValue(ACTION_DESC, "Enqueue song(s)");
 
+		// Removing songs from playlist
 		plRemoveSongs = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        EventSelectionModel model = (EventSelectionModel)qtable.getSelectionModel();
@@ -3844,6 +3884,7 @@ public class GetItTogether implements ItemListener,
 		};
 		plRemoveSongs.putValue(ACTION_DESC, "Remove song(s)");
 		
+		// Playing playlist
 		plPlay = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        EventList songs = queue.selectionModel.getSelected();
@@ -3855,6 +3896,7 @@ public class GetItTogether implements ItemListener,
 		};
 		plPlay.putValue(ACTION_DESC, "Play selected song");
 		
+		// Pausing playing of songs
 		pausePlay = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				//					if (p != null) {
@@ -3876,6 +3918,7 @@ public class GetItTogether implements ItemListener,
 		};
 		pausePlay.putValue(ACTION_DESC, "Pause / resume");
 
+		// Clearing playlist
 		clearPlay = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        queue.clearQueueAndPlay(getCurrentlySelectedSongs());
@@ -3883,6 +3926,7 @@ public class GetItTogether implements ItemListener,
 		};
 		clearPlay.putValue(ACTION_DESC, "Play song(s)");
 
+		// Reconnecting selected host
 		reconnectHost = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        GITNode node = getSelectedNode();
@@ -3901,13 +3945,15 @@ public class GetItTogether implements ItemListener,
 		};
 		reconnectHost.putValue(ACTION_DESC, "Reconnect Host");
 		
+		// Disconnecting selected host
 		disconnectHost = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        disconnectSelectedHost();
 		    }
 		};
 		disconnectHost.putValue(ACTION_DESC, "Disconnect Host");
-				
+		
+		// Connecting selected host
 		connectHost = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        connectHostNode((HostNode)getSelectedNode());
@@ -3915,6 +3961,7 @@ public class GetItTogether implements ItemListener,
 		};
 		connectHost.putValue(ACTION_DESC, "Connect Host");
 		
+		// Clicking icon of node (?)
 		hostButton = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        final GITNode node = getSelectedNode();
@@ -3964,6 +4011,7 @@ public class GetItTogether implements ItemListener,
 		};
 		openSearch.putValue(ACTION_DESC, "Search");
 
+		// Downloading selected songs
 		download = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 	      Collection c = getCurrentlySelectedSongs();
@@ -4087,6 +4135,7 @@ public class GetItTogether implements ItemListener,
 		};
 		removee.putValue(ACTION_DESC, "Remove from playlist");
 
+		// Hiding all other hosts except for selected one
 		hideOthers = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 Host h = getSelectedHost();
@@ -4102,6 +4151,7 @@ public class GetItTogether implements ItemListener,
 		};
 		hideOthers.putValue(ACTION_DESC, "Hide all other hosts");
 		
+		// Connecting everything
 		connectAll = new AbstractAction() {
 		    
             public void actionPerformed(ActionEvent e) {
@@ -4127,6 +4177,7 @@ public class GetItTogether implements ItemListener,
             }	};
 		connectAll.putValue(ACTION_DESC, "Connect to all hosts");
 		
+		// Disconnecting everything
 		disconnectAll = new AbstractAction() {
 		    public void actionPerformed(ActionEvent e) {
 		        GITNode node = getSelectedNode();
@@ -4214,6 +4265,7 @@ public class GetItTogether implements ItemListener,
         };
         removeLibrary.putValue(ACTION_DESC, "Remove Library");
 		
+        // Removing selected songs
         removeSongs = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 JTable t = getVisibleTable();
@@ -4292,6 +4344,7 @@ public class GetItTogether implements ItemListener,
         };
         removeSongs.putValue(ACTION_DESC, "Remove song(s) from library");
         
+        // Toggling song info display
         songInfoAction = new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 final GlazedGITSongJPanel p = getVisibleCard();

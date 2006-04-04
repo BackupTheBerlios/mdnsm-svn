@@ -40,7 +40,7 @@ import ca.odell.glazedlists.TextFilterable;
 public abstract class LocalHost extends Host implements TextFilterable{
     protected String root = "";
     static public final String[] type_strings = { "iTunes Library",
-            "MP3 Directory", "iPod" };
+            "MP3 Directory", "iPod", "Lyrics library", "Settings" };
     
     protected JLabel current_scan = new JLabel();
     
@@ -49,7 +49,8 @@ public abstract class LocalHost extends Host implements TextFilterable{
     public static final int GIT_LIBRARY = 0;
     public static final int IPOD = 1;
     public static final int ITUNES_XML = 2;
-    
+    public static final int GIT_LYRICS = 3;
+    public static final int GIT_SETTINGS = 4;
     
     public EventList songs = new BasicEventList(new ArrayList(200));
 
@@ -260,6 +261,12 @@ public abstract class LocalHost extends Host implements TextFilterable{
     public int getLibraryType() {
         if (this instanceof GITLibraryHost)
             return LocalHost.GIT_LIBRARY;
+        else if(this instanceof GITLyricsHost) {
+        	return LocalHost.GIT_LYRICS;
+        }
+        else if(this instanceof GITSettingsHost) {
+        	return LocalHost.GIT_SETTINGS;
+        }
         else if (this instanceof IPodHost)
             return LocalHost.IPOD;
         else

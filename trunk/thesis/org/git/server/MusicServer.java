@@ -119,7 +119,7 @@ public final class MusicServer extends BasicStatusObject implements DaapAuthenti
       serverThread.start();
       
       // register this server with Rendezvous
-      RendezvousManager.instance().registerServer();
+      RendezvousManager.instance().registerServer(GetItTogether.iTunesService);
       
       setStatus(MusicServer.STATUS_RUNNING);
       } catch (IOException io) {
@@ -216,7 +216,7 @@ public final class MusicServer extends BasicStatusObject implements DaapAuthenti
   	        id2path.clear();
   	    
   	    // unregister this server with Rendezvous
-  	    RendezvousManager.instance().unregisterServer();
+  	    RendezvousManager.instance().unregisterServer(GetItTogether.iTunesService);
   	    
   	    server = null;
   	    id2path = null;

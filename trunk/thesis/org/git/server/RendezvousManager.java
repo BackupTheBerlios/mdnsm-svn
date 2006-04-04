@@ -13,6 +13,8 @@ import java.util.Hashtable;
 import org.mdnsm.mdns.ServiceInfo;
 import org.mdnsm.client.*;
 
+import org.git.client.swing.GetItTogether;
+
 import org.git.GITProperties;
 import org.git.GITUtils;
 import org.git.client.BasicStatusObject;
@@ -29,7 +31,6 @@ public final class RendezvousManager extends BasicStatusObject{
     
     private static RendezvousManager INSTANCE = new RendezvousManager();
     
-    public static final String DAAP_SERVICE_TYPE = "_daap._tcp.*.local.";
     public static final String MACHINE_NAME = "Machine Name";
     public static final String PASSWORD = "Password";
     public static final String VERSION = "Version";
@@ -43,14 +44,17 @@ public final class RendezvousManager extends BasicStatusObject{
     
     private InetAddress address;
     private Client client;
-    private ServiceInfo server_info;
+    
+    private ServiceInfo music_server_info;
+    private ServiceInfo lyrics_server_info;
+    private ServiceInfo settings_server_info;
     
     public static RendezvousManager instance() {
         return INSTANCE;
     }
     
     // returns a ServiceInfo object based on the current GITProperties server settings
-    private ServiceInfo createServerInfo() {
+    private ServiceInfo createMusicServerInfo() {
         ServiceInfo info;
         
         // load stuff from GITProperties.
@@ -68,54 +72,148 @@ public final class RendezvousManager extends BasicStatusObject{
         
         //String qualified_name = GITUtils.getQualifiedServiceName(name);
         
-        info = new ServiceInfo(DAAP_SERVICE_TYPE, name, port,
+        info = new ServiceInfo(GetItTogether.iTunesService, name, port,
             				0, 0, props);
         
         return info;
     }
     
-    public boolean isRegistered() {
-        return (server_info != null);
+    private ServiceInfo createLyricsServerInfo() {
+        ServiceInfo info;
+        
+        // load stuff from GITProperties.
+        String name = GITProperties.lyricsShareName;
+        int port = GITProperties.lyricsSharePort;
+        
+        // add the Rendezvous properties.
+        Hashtable props = new Hashtable();
+        props.put(MACHINE_NAME, GITProperties.lyricsShareName);
+        props.put(PASSWORD, Boolean.toString(GITProperties.lyricsSharePasswordRequired));
+        props.put(VERSION, String.valueOf(DaapUtil.VERSION_3));
+        props.put(SERVER_PROGRAM, GIT_SERVER);
+        
+        //String qualified_name = GITUtils.getQualifiedServiceName(name);
+        
+        info = new ServiceInfo(GetItTogether.lyricsService, name, port,
+            				0, 0, props);
+        
+        return info;
     }
     
-    // registers the daap server with mDNS
-    public synchronized void registerServer() throws IOException {
-        if (isRegistered())
-            return;
+    private ServiceInfo createSettingsServerInfo() {
+        ServiceInfo info;
         
-        ServiceInfo info = createServerInfo();
-        client.registerService(info);
+        // load stuff from GITProperties.
+        String name = GITProperties.settingsShareName;
+        int port = GITProperties.settingsSharePort;
         
-        this.server_info = info;
-        setStatus(STATUS_REGISTERED);
+        // add the Rendezvous properties.
+        Hashtable props = new Hashtable();
+        props.put(MACHINE_NAME, GITProperties.settingsShareName);
+        props.put(PASSWORD, Boolean.toString(GITProperties.settingsSharePasswordRequired));
+        props.put(VERSION, String.valueOf(DaapUtil.VERSION_3));
+        props.put(SERVER_PROGRAM, GIT_SERVER);
+        
+        //String qualified_name = GITUtils.getQualifiedServiceName(name);
+        
+        info = new ServiceInfo(GetItTogether.settingsService, name, port,
+            				0, 0, props);
+        
+        return info;
+    }
+    
+    public boolean isMusicRegistered() {
+        return (music_server_info != null);
+    }
+    
+    public boolean isLyricsRegistered() {
+        return (lyrics_server_info != null);
+    }
+    
+    public boolean isSettingsRegistered() {
+        return (settings_server_info != null);
+    }
+    
+    /**
+     * Register the server of the given type with the client.
+     */
+    public synchronized void registerServer(String type) throws IOException {
+        if(type.equals(GetItTogether.iTunesService)) {
+	    	if (isMusicRegistered())
+	            return;
+	        
+	        ServiceInfo info = createMusicServerInfo();
+	        client.registerService(info);
+	        
+	        this.music_server_info = info;
+        }
+        else if(type.equals(GetItTogether.lyricsService)) {
+	    	if (isLyricsRegistered())
+	            return;
+	        
+	        ServiceInfo info = createLyricsServerInfo();
+	        client.registerService(info);
+	        
+	        this.lyrics_server_info = info;
+        }
+        if(type.equals(GetItTogether.settingsService)) {
+	    	if (isSettingsRegistered())
+	            return;
+	        
+	        ServiceInfo info = createSettingsServerInfo();
+	        client.registerService(info);
+	        
+	        this.settings_server_info = info;
+        }
+        if(isMusicRegistered() || isLyricsRegistered() || isSettingsRegistered()) {
+        	setStatus(STATUS_REGISTERED);
+        }
     }
     
     // unregisters the daap server with mDNS
-    public synchronized void unregisterServer() {
-        if (!isRegistered())
-            return;
-        client.unregisterService(server_info);
-        this.server_info = null;
-        setStatus(STATUS_UNREGISTERED);
+    public synchronized void unregisterServer(String type) {
+        if(type.equals(GetItTogether.iTunesService)) {
+			if (!isMusicRegistered())
+		        return;
+		    client.unregisterService(music_server_info);
+		    this.music_server_info = null;
+        }
+        else if(type.equals(GetItTogether.lyricsService)) {
+			if (!isLyricsRegistered())
+		        return;
+		    client.unregisterService(lyrics_server_info);
+		    this.lyrics_server_info = null;
+        }
+        else if(type.equals(GetItTogether.settingsService)) {
+			if (!isSettingsRegistered())
+		        return;
+		    client.unregisterService(settings_server_info);
+		    this.settings_server_info = null;
+        }
+        if(!isMusicRegistered() && !isLyricsRegistered() && !isSettingsRegistered()) {
+        	setStatus(STATUS_UNREGISTERED);
+        }
     }
     
-    // updates the broadcast server info
+    // updates the broadcast music server info
     public synchronized void update() {
-        if (!isRegistered())
+        if (!isMusicRegistered())
             return;
         
-        unregisterServer();
+        unregisterServer(GetItTogether.iTunesService);
         
-        ServiceInfo info = createServerInfo();
+        ServiceInfo info = createMusicServerInfo();
         client.registerService(info);
-        server_info = info;
+        music_server_info = info;
         setStatus(STATUS_REGISTERED);
     }
     
     // closes jmdns, unregisters all services.
     public synchronized void close() {
         setStatus(STATUS_UNREGISTERED);
-        server_info = null;
+        music_server_info = null;
+        lyrics_server_info = null;
+        settings_server_info = null;
         client.shutdown();
     }
     
