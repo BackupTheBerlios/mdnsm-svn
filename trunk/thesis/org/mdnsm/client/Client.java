@@ -928,9 +928,17 @@ public class Client {
     				//System.out.println("pointer to " + rec.getName());
     				type = JmDNS.convertToType(rec.getName());
     				info = new ServiceInfo(rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()));
-    				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
-    					ServiceListener l = (ServiceListener)j.next();
-    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()), null));
+    				if(rec.ttl == 0) {
+    					for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
+	    					ServiceListener l = (ServiceListener)j.next();
+	    					l.serviceRemoved(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()), null));
+	    				}
+    				}
+    				else {
+	    				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
+	    					ServiceListener l = (ServiceListener)j.next();
+	    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), rec.getName(), JmDNS.toUnqualifiedName(rec.getName(), ((DNSRecord.Pointer)rec).getAlias()), null));
+	    				}
     				}
     				
     				//(new ServiceInfoResolver(info)).start();
@@ -938,19 +946,12 @@ public class Client {
     			case DNSConstants.TYPE_SRV:
     				//System.out.println("srv to " + rec.getName());
     				type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
-    				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), ((DNSRecord.Service)rec).port, ((DNSRecord.Service)rec).weight, ((DNSRecord.Service)rec).priority, "");
+    				DNSRecord trec = (DNSRecord)i.next();
+    				byte[] text = ((DNSRecord.Text)trec).text;
+    				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), ((DNSRecord.Service)rec).port, ((DNSRecord.Service)rec).weight, ((DNSRecord.Service)rec).priority, new String(text));
     				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
     					ServiceListener l = (ServiceListener)j.next();
-    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
-    				}
-    				break;
-    			case DNSConstants.TYPE_TXT:
-    				//System.out.println("txt to " + rec.getName());
-    				type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
-    				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), 0, 0, 0, ((DNSRecord.Text)rec).text);
-    				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
-    					ServiceListener l = (ServiceListener)j.next();
-    					l.serviceAdded(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
+    					l.serviceResolved(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));
     				}
     				break;
     		}

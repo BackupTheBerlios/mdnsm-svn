@@ -54,7 +54,7 @@ public class ServiceInfo implements DNSListener {
 
 	int priority;
 
-	byte text[];
+	public byte text[];
 
 	Hashtable props;
 

@@ -213,6 +213,15 @@ public class ServiceServer {
 			while(left && entry != null) {
 				left = client.getServerCache().remove(entry);
 			}
+			try {
+				DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
+				long now = System.currentTimeMillis();
+				out.addAnswer(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, 0, event.getName()+"."+event.getType()), now);
+				sendToServers(out);
+			}
+			catch(IOException exc) {
+				exc.printStackTrace();
+			}
 			System.out.println("[" + Utils.getTime() + "]\t@ "+hostAddress+":\t service removed :\t" + event.getName() + "." + event.getType());
 		}
 		
