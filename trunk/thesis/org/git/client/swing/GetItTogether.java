@@ -95,6 +95,7 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.Vector;
 
 import org.mdnsm.mdns.*;
 import org.mdnsm.client.*;
@@ -1064,6 +1065,8 @@ public class GetItTogether implements ItemListener,
 		
 	}
 	
+	private Vector knownHosts = new Vector();
+	
 	public void serviceResolved(ServiceEvent event) {
 		ServiceInfo info = event.getInfo();
         if (info == null) {
@@ -1078,11 +1081,9 @@ public class GetItTogether implements ItemListener,
         }
         DaapHost host;
         if (GITProperties.getDaapHost(info.getName()) != null) {
-        	System.out.println("existing host");
             host = GITProperties.getDaapHost(info.getName());
             host.loadServiceInfo(info);
         } else {
-        	System.out.println("new host");
             host = new DaapHost(info);
             host.loadServiceInfo(info);
             GITProperties.addDaapHost(host);
@@ -1092,46 +1093,48 @@ public class GetItTogether implements ItemListener,
         final DaapHost h = host;
         
 //        GITProperties.addDaapHost(h);
-        
-        h.addStatusListener(status_listener);
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                HostNode node = new HostNode(h);
-                hosts.insert(node, hosts.getIndexForInsertion(node));
-                if (hosts.getChildCount() == 1 && GITProperties.expandRemote)
-                    tree.expandPath(new TreePath(hosts.getPath()));
-//                tree.repaint();
-            }
-        });
-        host.setSongs(daapSongs.createMemberList());
-        daapSongs.getReadWriteLock().writeLock().lock();
-        daapSongs.addMemberList(host.getSongs());
-        daapSongs.getReadWriteLock().writeLock().unlock();
-        // auto connect the DaapHost if necessary
-        new SwingWorker() {
-			public Object construct() {
-			    Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-			    if (!GITProperties.autoConnect)
-			        return new Integer(0);
-			    try {Thread.sleep(200);}catch (Exception e) {}
-			    if (GITProperties.getSavedDaapHostInfo(h.getName(), "auto_connect").equals("true"))
-			    {
-			        h.setAutoConnect(true);
-			        if (h.login(false))
+        if(!knownHosts.contains(host)) {
+        	knownHosts.add(host);
+	        h.addStatusListener(status_listener);
+	        SwingUtilities.invokeLater(new Runnable() {
+	            public void run() {
+	                HostNode node = new HostNode(h);
+	                hosts.insert(node, hosts.getIndexForInsertion(node));
+	                if (hosts.getChildCount() == 1 && GITProperties.expandRemote)
+	                    tree.expandPath(new TreePath(hosts.getPath()));
+	//                tree.repaint();
+	            }
+	        });
+	        host.setSongs(daapSongs.createMemberList());
+	        daapSongs.getReadWriteLock().writeLock().lock();
+	        daapSongs.addMemberList(host.getSongs());
+	        daapSongs.getReadWriteLock().writeLock().unlock();
+	        // auto connect the DaapHost if necessary
+	        new SwingWorker() {
+				public Object construct() {
+				    Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+				    if (!GITProperties.autoConnect)
+				        return new Integer(0);
+				    try {Thread.sleep(200);}catch (Exception e) {}
+				    if (GITProperties.getSavedDaapHostInfo(h.getName(), "auto_connect").equals("true"))
 				    {
-				        h.grabSongs();
-				        addSongsGlazed(h);
-				        h.loadPlaylists();
-				        if (GITProperties.getSavedDaapHostInfo(h.getName(), "visible").equals("true"))
-				            hostClicked(hosts.getChildByName(h.getName()));
-				    }
+				        h.setAutoConnect(true);
+				        if (h.login(false))
+					    {
+					        h.grabSongs();
+					        addSongsGlazed(h);
+					        h.loadPlaylists();
+					        if (GITProperties.getSavedDaapHostInfo(h.getName(), "visible").equals("true"))
+					            hostClicked(hosts.getChildByName(h.getName()));
+					    }
+				        return new Integer(0);
+				    } else {
+			        h.setAutoConnect(false);
 			        return new Integer(0);
-			    } else {
-		        h.setAutoConnect(false);
-		        return new Integer(0);
-			    }
-			}
-		}.start();
+				    }
+				}
+			}.start();
+        }
     }
 
 	public void serviceAdded(ServiceEvent event) {
