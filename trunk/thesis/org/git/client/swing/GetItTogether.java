@@ -427,9 +427,9 @@ public class GetItTogether implements ItemListener,
 		    GetItTogether.instance.stopPlaying();
 		    
 		    //GITProperties.writeXML();
-//		    MusicServer.instance().stop();
-//		    LyricsServer.instance().stop();
-//		    SettingsServer.instance().stop();
+		    MusicServer.instance().stop();
+		    LyricsServer.instance().stop();
+		    SettingsServer.instance().stop();
 		    client.shutdown();
 			System.out.println("exit hook complete!");
 		}
@@ -462,10 +462,25 @@ public class GetItTogether implements ItemListener,
         // Creating shutdown hook thread
         shutdownHook = new Thread() {
             public void run() {
-                GetItTogether.instance.stopPlaying();
-                //GITProperties.writeXML();
-                MusicServer.instance().stop();
-                client.shutdown();
+            	serviceRequester.stop();
+    			
+    		    GetItTogether.instance.stopPlaying();
+    		    
+    		    //GITProperties.writeXML();
+    		    
+    		    MusicServer.instance().stop();
+    		    LyricsServer.instance().stop();
+    		    SettingsServer.instance().stop();
+    		    
+    		    try {
+    				Thread.sleep(500);
+    			}
+    			catch(Exception exc) {
+    				
+    			}
+    		    
+    		    client.shutdown();
+    		    
                 if (DownloadManager.dlThread != null && !gopher.isQueueFinished())
                     DownloadManager.dlThread.waitForDownloadToFinish();
                 System.out.println("Exit hook complete!");
@@ -1053,7 +1068,6 @@ public class GetItTogether implements ItemListener,
 		}
 		
 		public void run() {
-			System.out.println("REQUESTING SERVICES");
 			client.requestServices(iTunesService);
 			client.requestServices(lyricsService);
 			client.requestServices(settingsService);

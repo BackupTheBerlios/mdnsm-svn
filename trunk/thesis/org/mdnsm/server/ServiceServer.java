@@ -248,7 +248,12 @@ public class ServiceServer {
 		}
 		
 		public void run() {
-			jmdns.requestServices("_sserver._udp.*.local.");
+			try {
+				jmdns.requestServices("_sserver._udp.*.local.");
+			}
+			catch(IllegalStateException exc) {
+				
+			}
 		}
 		
 	}
@@ -530,7 +535,7 @@ public class ServiceServer {
 		
 		serverChecker.cancel();
 		
-		jmdns.unregisterService(serviceInfo);
+		//jmdns.unregisterService(serviceInfo);
 		jmdns.removeServiceTypeListener(serviceTypeListener);
 		for(Iterator i = serviceListeners.iterator(); i.hasNext();) {
 			SListener s = (SListener)i.next();

@@ -976,16 +976,16 @@ public class Client {
      */
     public void shutdown() {
     	nicMonitor.cancel();
+    	for(Iterator a = servers.values().iterator(); a.hasNext();) {
+    		((ServiceServer)a.next()).shutdown();
+    	}
+    	servers.clear();
     	if(jmdnss.size() == 1) {
     		JmDNS jmdns = ((JmDNS)jmdnss.get((String)jmdnss.keys().nextElement()));
     		jmdns.removeServiceListener("_sserver._udp.*.local.", serverListener);
     		serverChecker.cancel();
     		serverCleaner.cancel();
     	}
-    	for(Iterator a = servers.values().iterator(); a.hasNext();) {
-    		((ServiceServer)a.next()).shutdown();
-    	}
-    	servers.clear();
     	for(Iterator b = serverDaemons.values().iterator(); b.hasNext();) {
     		((ServerDaemon)b.next()).stop();
     	}

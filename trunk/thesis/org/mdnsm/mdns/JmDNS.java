@@ -631,7 +631,6 @@ public class JmDNS
      */
     public void registerService(ServiceInfo info) throws IOException
     {
-    	System.out.println("registering type " + info.getType() + " with instance name " + info.getName());
         registerServiceType(info.type);
 
         // bind the service to this address
@@ -664,7 +663,6 @@ public class JmDNS
     
     public void unregisterService(ServiceInfo info, boolean needIP) throws IOException {
     	if(needIP) {
-    		System.out.println("unreg "+info.type);
     		String newType = "";
     		StringTokenizer tok = new StringTokenizer(info.type, ".");
     		String token = tok.nextToken();
@@ -700,17 +698,17 @@ public class JmDNS
     	new Canceler(info, lock).start();
     	
     	// Remind: We get a deadlock here, if the Canceler does not run!
-    	try
-    	{
-    		synchronized (lock)
-    		{
-    			lock.wait();
-    		}
-    	}
-    	catch (InterruptedException e)
-    	{
-    		// empty
-    	}
+//    	try
+//    	{
+//    		synchronized (lock)
+//    		{
+//    			lock.wait();
+//    		}
+//    	}
+//    	catch (InterruptedException e)
+//    	{
+//    		// empty
+//    	}
     }
     
     /**
