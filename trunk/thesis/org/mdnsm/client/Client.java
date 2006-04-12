@@ -829,6 +829,12 @@ public class Client {
     		for (DNSCache.CacheNode n = (DNSCache.CacheNode) i.next(); n != null; n = n.next()) {
     			DNSEntry entry = n.getValue();
     			String ip = "";
+    			if(entry.getType() == DNSConstants.TYPE_PTR) {
+    				ip = Utils.getIPFromType(((DNSRecord.Pointer)entry).getAlias());
+    				if(!result.contains(ip)) {
+    					result.add(ip);
+    				}
+    			}
     			if(entry.getType() == DNSConstants.TYPE_SRV || entry.getType() == DNSConstants.TYPE_TXT) {
     				ip = Utils.getIPFromType(entry.getName());
     				if(!result.contains(ip)) {
@@ -877,11 +883,11 @@ public class Client {
                     		for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
                     			DNSQuestion q = (DNSQuestion)i.next();
                     			if(q.getType() == DNSConstants.TYPE_SRV) {
-                    				ServiceInfo info = ((JmDNS)jmdnss.get(ip)).getServiceInfo(q.getName());
+                    				ServiceInfo info = ((JmDNS)jmdnss.get(ip)).getServiceInfo(q.getName().toLowerCase());
                     				out.addAnswer(new DNSRecord.Service(info.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getPriority(), info.getWeight(), info.getPort(), info.getServer()), System.currentTimeMillis());
                     			}
                     			else if(q.getType() == DNSConstants.TYPE_TXT) {
-                    				ServiceInfo info = ((JmDNS)jmdnss.get(ip)).getServiceInfo(q.getName());
+                    				ServiceInfo info = ((JmDNS)jmdnss.get(ip)).getServiceInfo(q.getName().toLowerCase());
                     				out.addAnswer(new DNSRecord.Text(info.getQualifiedName(), DNSConstants.TYPE_TXT, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, info.getTextBytes()), System.currentTimeMillis());
                     			}
                     		}
@@ -949,6 +955,8 @@ public class Client {
     				DNSRecord trec = (DNSRecord)i.next();
     				byte[] text = ((DNSRecord.Text)trec).text;
     				info = new ServiceInfo(JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), ((DNSRecord.Service)rec).port, ((DNSRecord.Service)rec).weight, ((DNSRecord.Service)rec).priority, new String(text));
+    				info.addr = InetAddress.getByName(Utils.getIPFromType(rec.getName()));
+    				info.server = ((DNSRecord.Service)rec).server;
     				for(Iterator j = ((Vector)infoListeners.get(type)).iterator(); j.hasNext();) {
     					ServiceListener l = (ServiceListener)j.next();
     					l.serviceResolved(new ServiceEvent((JmDNS)jmdnss.values().iterator().next(), JmDNS.toFullType(rec.getName()), JmDNS.toUnqualifiedName(JmDNS.toFullType(rec.getName()), rec.getName()), info));

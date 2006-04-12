@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.util.*;
+import java.net.*;
 
 /**
  * Common methods used throughout
@@ -452,6 +453,15 @@ public class Utils {
     public static String getTime() {
     	DateFormat time = DateFormat.getTimeInstance(DateFormat.MEDIUM, new Locale("de_DE"));
     	return time.format(new Date());
+    }
+    
+    public static String getHostName() {
+    	try {
+    		return InetAddress.getLocalHost().getHostName();
+    	}
+    	catch(UnknownHostException exc) {
+    		return "";
+    	}
     }
     
 }

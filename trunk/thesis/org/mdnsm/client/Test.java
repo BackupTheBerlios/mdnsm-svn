@@ -18,8 +18,16 @@ public class Test {
 		catch(Exception exc) {
 			
 		}
-		//client.registerService(new ServiceInfo("_test._udp.*.local.", "mdnsm3", 80, 0, 0, new String("testftp").getBytes()));
+		ServiceInfo info = new ServiceInfo("_blop._udp.*.local.", "mdnsm3", 80, 0, 0, new String("testblop").getBytes());
+		client.registerService(info);
 		//client.requestInfo("_test._udp.*.local.", new L());
+		try {
+			Thread.sleep(15000);
+		}
+		catch(Exception exc) {
+			
+		}
+		client.unregisterService(info);
 	}
 	
 	private static class L implements ServiceListener {

@@ -46,7 +46,7 @@ public class ServiceInfo implements DNSListener {
 
 	private String name;
 
-	String server;
+	public String server;
 
 	int port;
 
@@ -58,7 +58,7 @@ public class ServiceInfo implements DNSListener {
 
 	Hashtable props;
 
-	InetAddress addr;
+	public InetAddress addr;
 
 	/**
 	 * Construct a service description for registrating with JmDNS.

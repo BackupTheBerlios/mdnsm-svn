@@ -59,7 +59,7 @@ public class ServiceServer {
 		// Register this server as a service
 		try {
 			// TODO: deftige benaming voor service servers en deftige beschrijving
-			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver", Utils.SERVER_COM, "service server on "+hostAddress+" registering services");
+			serviceInfo = new ServiceInfo("_sserver._udp." + getHostAddress() + ".local.", "serviceserver@"+Utils.getHostName(), Utils.SERVER_COM, "service server on "+hostAddress+" registering services");
 			jmdns.registerService(serviceInfo);
 			client.getServerCache().add(new DNSRecord.Pointer(serviceInfo.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getQualifiedName()));
 			client.getServerCache().add(new DNSRecord.Service(serviceInfo.getQualifiedName(), DNSConstants.TYPE_SRV, DNSConstants.CLASS_IN, infoTtl, serviceInfo.getPriority(), serviceInfo.getWeight(), serviceInfo.getPort(), jmdns.getLocalHost().getName()));
@@ -438,7 +438,6 @@ public class ServiceServer {
                 		
                 		// Incoming query
                 		if(msg.isQuery()) {
-                			System.out.println("server query van " + packet.getAddress().getHostAddress());
                 			DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
                 			String sender = packet.getAddress().getHostAddress();
                 			for(Iterator i = msg.getQuestions().iterator(); i.hasNext();) {
@@ -455,13 +454,11 @@ public class ServiceServer {
                     					out.addAnswer(new DNSRecord.Pointer(entry.getName(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, DNSConstants.DNS_TTL, ((DNSRecord.Pointer)entry).getAlias()), System.currentTimeMillis());
                     				}
                     			}
-                    			
                     			send(out, sender, true);
                     		}
                 		}
                 		
                 		else if(msg.isResponse()) {
-                			System.out.println("server response van " + packet.getAddress().getHostAddress());
                 			DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
                 			String type = "";
                 			for(Iterator i = msg.getAnswers().iterator(); i.hasNext();) {

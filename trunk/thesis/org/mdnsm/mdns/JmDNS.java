@@ -2,7 +2,6 @@
 //Licensed under Apache License version 2.0
 //Original license LGPL
 
-
 package org.mdnsm.mdns;
 
 import java.io.IOException;

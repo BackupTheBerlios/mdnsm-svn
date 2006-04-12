@@ -301,6 +301,7 @@ public class GetItTogether implements ItemListener,
     protected GITTreeModel tree_model;
     protected JTree tree;
     protected java.util.Timer timer;
+    private java.util.Timer timer2 = new java.util.Timer();
     public GITNode hosts;
     protected StatusListener status_listener, plistener;
     protected GITNode playlists;
@@ -337,6 +338,8 @@ public class GetItTogether implements ItemListener,
     protected MusicServer musicServer;
     protected LyricsServer lyricsServer;
     protected SettingsServer settingsServer;
+    
+    private ServiceRequester serviceRequester;
     
     protected RendezvousManager rendezvous;
     private AbstractAction reconnectHost;
@@ -418,10 +421,14 @@ public class GetItTogether implements ItemListener,
 	private class ExitHook implements Runnable {
 
 		public void run() {
+			serviceRequester.stop();
+			
 		    GetItTogether.instance.stopPlaying();
 		    
 		    //GITProperties.writeXML();
 		    MusicServer.instance().stop();
+		    LyricsServer.instance().stop();
+		    SettingsServer.instance().stop();
 		    client.shutdown();
 			System.out.println("exit hook complete!");
 		}
@@ -805,10 +812,15 @@ public class GetItTogether implements ItemListener,
             client.addServiceListener(lyricsService, this);
             client.addServiceListener(settingsService, this);
             RendezvousManager.instance().setClient(client);
-            Thread.sleep(5000);  // TODO: properder oplossen
+            
+            Thread.sleep(15000);  // TODO: properder oplossen
+            
             musicServer.start();
             lyricsServer.start();
             settingsServer.start();
+            
+            serviceRequester = new ServiceRequester();
+            serviceRequester.start();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1036,19 +1048,23 @@ public class GetItTogether implements ItemListener,
 	private class ServiceRequester extends TimerTask {
 		
 		public void start() {
-			timer.schedule(this, 0, REQUEST_INTERVAL);
+			timer2.schedule(this, 0, REQUEST_INTERVAL);
 		}
 		
 		public void run() {
+			System.out.println("REQUESTING SARVICES");
 			client.requestServices(iTunesService);
 			client.requestServices(lyricsService);
 			client.requestServices(settingsService);
 		}
 		
+		public void stop() {
+			cancel();
+		}
+		
 	}
 	
 	public void serviceResolved(ServiceEvent event) {
-		// TODO: opsplitsen in verschillende types, of van lyrics en settings ook gewoon DAAP host laten maken?
 		ServiceInfo info = event.getInfo();
         if (info == null) {
             System.out.println("Unable to find service info!");
@@ -1062,9 +1078,11 @@ public class GetItTogether implements ItemListener,
         }
         DaapHost host;
         if (GITProperties.getDaapHost(info.getName()) != null) {
+        	System.out.println("existing host");
             host = GITProperties.getDaapHost(info.getName());
             host.loadServiceInfo(info);
         } else {
+        	System.out.println("new host");
             host = new DaapHost(info);
             host.loadServiceInfo(info);
             GITProperties.addDaapHost(host);
@@ -1118,7 +1136,9 @@ public class GetItTogether implements ItemListener,
 
 	public void serviceAdded(ServiceEvent event) {
 		ServiceInfo info = new ServiceInfo(event.getType(), event.getName());
-		if ((JmDNS.convertToType(event.getType())).equals(iTunesService)) // TODO: KLOPTA?
+		if ((JmDNS.convertToType(event.getType())).equals(iTunesService)
+				|| (JmDNS.convertToType(event.getType())).equals(lyricsService)
+				|| (JmDNS.convertToType(event.getType())).equals(settingsService))
 			client.requestServiceInfo(info);
 	}
 

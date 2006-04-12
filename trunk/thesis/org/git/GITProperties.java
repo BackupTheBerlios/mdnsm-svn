@@ -38,6 +38,7 @@ import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.XMLOutputter;
+import org.mdnsm.server.Utils;
 
 /**
  * @author Greg
@@ -50,7 +51,7 @@ public final class GITProperties implements Serializable{
     // MUSIC SERVER SETTINGS:
     public static String specialFriend = "";
     public static int sharePort = 5371;
-    public static String shareName = "GITunes";
+    public static String shareName = "GITunes@"+Utils.getHostName();
     public static boolean shareEnabled = true;
     public static int shareLimit = 5;
     public static String sharePassword = "pw";
@@ -58,7 +59,7 @@ public final class GITProperties implements Serializable{
     
     // LYRICS SERVER SETTINGS:
     public static int lyricsSharePort = 5372;
-    public static String lyricsShareName = "gitlyrics";
+    public static String lyricsShareName = "gitlyrics@"+Utils.getHostName();
     public static boolean lyricsShareEnabled = true;
     public static int lyricsShareLimit = 5;
     public static String lyricsSharePassword = "lpw";
@@ -66,7 +67,7 @@ public final class GITProperties implements Serializable{
     
     // SETTINGS SERVER SETTINGS:
     public static int settingsSharePort = 5373;
-    public static String settingsShareName = "gitsettings";
+    public static String settingsShareName = "gitsettings@"+Utils.getHostName();
     public static boolean settingsShareEnabled = true;
     public static int settingsShareLimit = 5;
     public static String settingsSharePassword = "spw";
