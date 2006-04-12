@@ -18,7 +18,7 @@ public class Test {
 		catch(Exception exc) {
 			
 		}
-		client.registerService(new ServiceInfo("_test._udp.*.local.", "mdnsm3", 80, 0, 0, new String("testftp").getBytes()));
+		//client.registerService(new ServiceInfo("_test._udp.*.local.", "mdnsm3", 80, 0, 0, new String("testftp").getBytes()));
 		//client.requestInfo("_test._udp.*.local.", new L());
 	}
 	

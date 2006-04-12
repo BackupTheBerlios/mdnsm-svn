@@ -469,6 +469,9 @@ public abstract class DNSRecord extends DNSEntry
         boolean sameValue(DNSRecord other)
         {
             Text txt = (Text) other;
+            if(txt.text == null) {
+            	return true; // Expiration record has text set to null and this method is only called when name and type match (should be valid match)
+            }
             if (txt.text.length != text.length)
             {
                 return false;
