@@ -196,7 +196,7 @@ public class ServiceServer {
 		public void serviceRemoved(ServiceEvent event) {
 			boolean left = true;
 			// Remove PTR records from the server cache
-			DNSEntry entry = client.getServerCache().get(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+event.getType()));
+			DNSEntry entry = client.getServerCache().get(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, infoTtl, event.getName()+"."+event.getType()));
 			String alias = ((DNSRecord.Pointer)entry).getAlias();
 			while(left && entry != null) {
 				left = client.getServerCache().remove(entry);
