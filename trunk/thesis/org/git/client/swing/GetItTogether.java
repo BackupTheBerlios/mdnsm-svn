@@ -427,9 +427,9 @@ public class GetItTogether implements ItemListener,
 		    GetItTogether.instance.stopPlaying();
 		    
 		    //GITProperties.writeXML();
-		    MusicServer.instance().stop();
-		    LyricsServer.instance().stop();
-		    SettingsServer.instance().stop();
+//		    MusicServer.instance().stop();
+//		    LyricsServer.instance().stop();
+//		    SettingsServer.instance().stop();
 		    client.shutdown();
 			System.out.println("exit hook complete!");
 		}
@@ -1053,7 +1053,7 @@ public class GetItTogether implements ItemListener,
 		}
 		
 		public void run() {
-			System.out.println("REQUESTING SARVICES");
+			System.out.println("REQUESTING SERVICES");
 			client.requestServices(iTunesService);
 			client.requestServices(lyricsService);
 			client.requestServices(settingsService);

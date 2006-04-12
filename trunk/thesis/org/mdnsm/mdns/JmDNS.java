@@ -664,6 +664,7 @@ public class JmDNS
     
     public void unregisterService(ServiceInfo info, boolean needIP) throws IOException {
     	if(needIP) {
+    		System.out.println("unreg "+info.type);
     		String newType = "";
     		StringTokenizer tok = new StringTokenizer(info.type, ".");
     		String token = tok.nextToken();

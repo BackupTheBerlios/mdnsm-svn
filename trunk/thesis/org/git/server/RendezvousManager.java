@@ -200,10 +200,10 @@ public final class RendezvousManager extends BasicStatusObject{
         if (!isMusicRegistered())
             return;
         
-        unregisterServer(GetItTogether.iTunesService);
+        //unregisterServer(GetItTogether.iTunesService);
         
         ServiceInfo info = createMusicServerInfo();
-        client.registerService(info);
+        //client.registerService(info);
         music_server_info = info;
         setStatus(STATUS_REGISTERED);
     }

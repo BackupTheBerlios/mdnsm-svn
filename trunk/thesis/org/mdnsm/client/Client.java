@@ -101,7 +101,12 @@ public class Client {
 	public void unregisterService(ServiceInfo info) {
 		try {
 			for(Iterator i = jmdnss.values().iterator(); i.hasNext();) {
+				if(info.getType().indexOf("*") >= 0) {
 					((JmDNS)i.next()).unregisterService(info, true);
+				}
+				else {
+					((JmDNS)i.next()).unregisterService(info);
+				}
 			}
 		}
 		catch(IOException exc) {
