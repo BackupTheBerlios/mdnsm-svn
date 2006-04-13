@@ -662,18 +662,19 @@ public class JmDNS
     }
     
     public void unregisterService(ServiceInfo info, boolean needIP) throws IOException {
+    	ServiceInfo tinfo = new ServiceInfo(info);
     	if(needIP) {
     		String newType = "";
-    		StringTokenizer tok = new StringTokenizer(info.type, ".");
+    		StringTokenizer tok = new StringTokenizer(tinfo.type, ".");
     		String token = tok.nextToken();
     		while(!token.equals("*")) {
     			newType = newType + token + ".";
     			token = tok.nextToken();
     		}
     		newType = newType + ip + ".local.";
-    		info.type = newType;
+    		tinfo.type = newType;
     	}
-    	unregisterService(info);
+    	unregisterService(tinfo);
     }
     
     /**

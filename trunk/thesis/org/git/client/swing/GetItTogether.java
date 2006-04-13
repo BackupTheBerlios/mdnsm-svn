@@ -1095,7 +1095,7 @@ public class GetItTogether implements ItemListener,
         }
         DaapHost host;
         if (GITProperties.getDaapHost(info.getName()) != null) {
-            host = GITProperties.getDaapHost(info.getName());
+        	host = GITProperties.getDaapHost(info.getName());
             host.loadServiceInfo(info);
         } else {
             host = new DaapHost(info);
@@ -1161,6 +1161,7 @@ public class GetItTogether implements ItemListener,
 
 	public void serviceRemoved(ServiceEvent event) {
 		// TODO: mogelijk verkeerd
+		System.out.println("GIT removing "+event.getType());
 		String name = event.getName();
 		String type = event.getType();
 		if (name.equals(GITUtils.getQualifiedServiceName(GITProperties.shareName)))

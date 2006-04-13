@@ -955,7 +955,6 @@ public class Client {
     				//(new ServiceInfoResolver(info)).start();
     				break;
     			case DNSConstants.TYPE_SRV:
-    				//System.out.println("srv to " + rec.getName());
     				type = JmDNS.convertToType(JmDNS.toFullType(rec.getName()));
     				DNSRecord trec = (DNSRecord)i.next();
     				byte[] text = ((DNSRecord.Text)trec).text;

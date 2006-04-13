@@ -125,6 +125,22 @@ public final class DNSOutgoing
             }
         }
     }
+    
+    public void addExpireAnswer(DNSRecord rec, long now) throws IOException
+    {
+        if (numAuthorities > 0 || numAdditionals > 0)
+        {
+            throw new IllegalStateException("Questions must be added before answers");
+        }
+        if (rec != null)
+        {
+            if (now == 0)
+            {
+                writeRecord(rec, now);
+                numAnswers++;
+            }
+        }
+    }
 
     private LinkedList authorativeAnswers = new LinkedList();
 

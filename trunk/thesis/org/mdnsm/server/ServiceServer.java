@@ -216,7 +216,7 @@ public class ServiceServer {
 			try {
 				DNSOutgoing out = new DNSOutgoing(DNSConstants.FLAGS_QR_RESPONSE);
 				long now = System.currentTimeMillis();
-				out.addAnswer(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, 0, event.getName()+"."+event.getType()), now);
+				out.addExpireAnswer(new DNSRecord.Pointer(event.getType(), DNSConstants.TYPE_PTR, DNSConstants.CLASS_IN, 0, event.getName()+"."+event.getType()), 0);
 				sendToServers(out);
 			}
 			catch(IOException exc) {
@@ -468,6 +468,7 @@ public class ServiceServer {
                 			String type = "";
                 			for(Iterator i = msg.getAnswers().iterator(); i.hasNext();) {
                     			DNSRecord q = (DNSRecord)i.next();
+                    			
                     			if(q.getType() == DNSConstants.TYPE_PTR) {
                     				if(type.equals("")) {
                     					type = JmDNS.convertToType(q.getName());
