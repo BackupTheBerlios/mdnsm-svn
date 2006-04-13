@@ -1177,6 +1177,7 @@ public class GetItTogether implements ItemListener,
 		
 		System.out.println(name);
 		DaapHost h = new DaapHost(si);
+		knownHosts.remove(h);
 		String hname = h.getName();
 		System.out.println("losing host: "+hname);
 		if (hname.endsWith("_PW"))
