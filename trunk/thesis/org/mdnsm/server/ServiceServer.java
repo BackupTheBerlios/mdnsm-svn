@@ -468,12 +468,16 @@ public class ServiceServer {
                 			String type = "";
                 			for(Iterator i = msg.getAnswers().iterator(); i.hasNext();) {
                     			DNSRecord q = (DNSRecord)i.next();
-                    			
                     			if(q.getType() == DNSConstants.TYPE_PTR) {
                     				if(type.equals("")) {
                     					type = JmDNS.convertToType(q.getName());
                     				}
-                    				out.addAnswer((DNSRecord.Pointer)q, System.currentTimeMillis());
+                    				if(q.ttl == 0) {
+                    					out.addExpireAnswer((DNSRecord.Pointer)q, 0);
+                    				}
+                    				else {
+                    					out.addAnswer((DNSRecord.Pointer)q, System.currentTimeMillis());
+                    				}
                     			}
                 			}
                 			for(Iterator i = ((Vector)typeRequesters.get(type)).iterator(); i.hasNext();) {
